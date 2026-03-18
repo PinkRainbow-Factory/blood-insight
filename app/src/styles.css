@@ -223,23 +223,13 @@ label { display: block; color: var(--muted); font-size: 14px; }
 .hero-drop-main {
   width: 90px;
   height: 116px;
-  background:
-    radial-gradient(circle at 38% 24%, rgba(255, 235, 228, 0.3), transparent 18%),
-    linear-gradient(180deg, #ff8f7f 0%, #ef6d6a 58%, #d74e56 100%);
+  background: url("/auth-hero-blood-drop.svg") center / contain no-repeat;
   box-shadow:
     0 18px 36px rgba(239, 109, 106, 0.28),
-    inset 0 1px 0 rgba(255,255,255,0.14);
+    0 0 30px rgba(239, 109, 106, 0.18);
   display: grid;
   place-items: center;
   transform: rotate(-18deg);
-  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 108 108'><path d='M54 14C43.1 28.8 25.8 43 25.8 63.8C25.8 82 40.6 95.4 58.8 95.4C77 95.4 91.8 82 91.8 63.8C91.8 43 74.6 28.8 63.6 14C61.6 11.2 56 11.2 54 14Z'/></svg>");
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 108 108'><path d='M54 14C43.1 28.8 25.8 43 25.8 63.8C25.8 82 40.6 95.4 58.8 95.4C77 95.4 91.8 82 91.8 63.8C91.8 43 74.6 28.8 63.6 14C61.6 11.2 56 11.2 54 14Z'/></svg>");
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: contain;
 }
 .hero-drop-soft {
   position: absolute;
@@ -261,36 +251,7 @@ label { display: block; color: var(--muted); font-size: 14px; }
   top: 54px;
 }
 .hero-drop-core {
-  width: 44px;
-  height: 54px;
-  border-radius: 18px;
-  background: rgba(255, 248, 243, 0.92);
-  display: grid;
-  align-content: center;
-  justify-items: start;
-  gap: 5px;
-  padding: 11px 9px;
-  transform: rotate(18deg);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
-}
-.hero-drop-line {
-  display: block;
-  height: 3px;
-  border-radius: 999px;
-  background: #d34b5a;
-}
-.hero-drop-line-1 { width: 18px; }
-.hero-drop-line-2 { width: 22px; background: #f08b97; }
-.hero-drop-line-3 { width: 15px; background: #f3bcc5; }
-.hero-drop-dot {
-  position: absolute;
-  right: 8px;
-  top: 13px;
-  width: 11px;
-  height: 11px;
-  border-radius: 999px;
-  background: #cf3047;
-  box-shadow: 0 0 0 2px rgba(255,255,255,0.42);
+  display: none;
 }
 .hero-info-card {
   position: absolute;
@@ -341,7 +302,7 @@ label { display: block; color: var(--muted); font-size: 14px; }
   margin: 0;
   font-size: 14px;
   line-height: 1.7;
-  max-width: 34ch;
+  max-width: 36ch;
   word-break: keep-all;
   line-break: strict;
 }
@@ -2724,19 +2685,7 @@ label { display: block; color: var(--muted); font-size: 14px; }
     height: 96px;
   }
   .hero-drop-core {
-    width: 36px;
-    height: 46px;
-    gap: 4px;
-    padding: 9px 7px;
-  }
-  .hero-drop-line-1 { width: 15px; }
-  .hero-drop-line-2 { width: 18px; }
-  .hero-drop-line-3 { width: 12px; }
-  .hero-drop-dot {
-    width: 9px;
-    height: 9px;
-    right: 7px;
-    top: 11px;
+    display: none;
   }
   .hero-drop-left {
     left: 68px;

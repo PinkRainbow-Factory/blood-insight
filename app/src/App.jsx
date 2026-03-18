@@ -2078,7 +2078,7 @@ function App() {
           <div className="auth-hero-copy">
             <h1><span>Blood Insight</span><br /><span>혈액으로 알아보는 나의 건강</span></h1>
             <p>
-              혈액검사 결과를 읽기 쉽게 정리하고, 질환과 증상 맥락까지
+              혈액 검사 결과를 읽기 쉽게 정리하고, 질환과 증상 맥락까지
               <br />
               함께 해설해 주는 개인 건강 AI 에이전트입니다.
             </p>
