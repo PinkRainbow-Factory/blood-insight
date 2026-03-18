@@ -1,4 +1,4 @@
-癤퓁mport { promises as fs } from "fs";
+import { promises as fs } from "fs";
 import path from "path";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 
@@ -43,6 +43,10 @@ function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
 
+function normalizeName(name) {
+  return String(name || "").trim();
+}
+
 function createPasswordHash(password, salt = randomBytes(16).toString("hex")) {
   const hash = scryptSync(password, salt, 64).toString("hex");
   return { salt, hash };
@@ -69,6 +73,17 @@ function buildSession(store, userId) {
   return token;
 }
 
+function maskEmail(email) {
+  const [localPart = "", domain = ""] = String(email || "").split("@");
+  if (!localPart || !domain) {
+    return email;
+  }
+  if (localPart.length <= 2) {
+    return `${localPart[0] || "*"}*@${domain}`;
+  }
+  return `${localPart.slice(0, 2)}${"*".repeat(Math.max(localPart.length - 2, 1))}@${domain}`;
+}
+
 export function toPublicUser(user) {
   const settings = user?.settings || buildDefaultSettings();
   return {
@@ -87,7 +102,7 @@ export function toPublicUser(user) {
 }
 
 export async function createUser({ name, email, password }) {
-  const cleanName = String(name || "").trim();
+  const cleanName = normalizeName(name);
   const cleanEmail = normalizeEmail(email);
   const cleanPassword = String(password || "");
 
@@ -146,6 +161,57 @@ export async function loginUser({ email, password }) {
     token,
     user: toPublicUser(user)
   };
+}
+
+export async function findLoginIds({ name }) {
+  const cleanName = normalizeName(name);
+  if (!cleanName) {
+    throw new Error("이름을 입력해 주세요.");
+  }
+
+  const store = await readStore();
+  const matches = store.users
+    .filter((user) => user.name === cleanName)
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+    .map((user) => ({
+      name: user.name,
+      emailMask: maskEmail(user.email),
+      createdAt: user.createdAt
+    }));
+
+  if (!matches.length) {
+    throw new Error("입력한 이름으로 가입된 계정을 찾지 못했습니다.");
+  }
+
+  return { matches };
+}
+
+export async function resetUserPassword({ name, email, newPassword }) {
+  const cleanName = normalizeName(name);
+  const cleanEmail = normalizeEmail(email);
+  const cleanPassword = String(newPassword || "");
+
+  if (!cleanName || !cleanEmail || !cleanPassword) {
+    throw new Error("이름, 이메일, 새 비밀번호를 모두 입력해 주세요.");
+  }
+
+  if (cleanPassword.length < 6) {
+    throw new Error("비밀번호는 6자 이상이어야 합니다.");
+  }
+
+  const store = await readStore();
+  const user = store.users.find((entry) => entry.name === cleanName && entry.email === cleanEmail);
+  if (!user) {
+    throw new Error("입력한 이름과 이메일이 일치하는 계정을 찾지 못했습니다.");
+  }
+
+  const passwordBundle = createPasswordHash(cleanPassword);
+  user.passwordHash = passwordBundle.hash;
+  user.passwordSalt = passwordBundle.salt;
+  store.sessions = store.sessions.filter((session) => session.userId !== user.id);
+  await writeStore(store);
+
+  return { ok: true };
 }
 
 export async function getUserByToken(token) {

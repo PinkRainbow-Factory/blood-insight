@@ -2172,6 +2172,16 @@ label { display: block; color: var(--muted); font-size: 14px; }
   gap: 12px;
   flex-wrap: wrap;
 }
+.auth-recovery-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.auth-secondary-link {
+  flex: 1 1 0;
+  justify-content: center;
+  text-align: center;
+}
 .auth-mode-link { white-space: nowrap; }
 .topbar-compact {
   padding: 14px 18px;

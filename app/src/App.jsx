@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { defaultProfile, diseaseCatalog, diseaseExpertGuides, diseasePlaybooks, metricDefinitions, sampleValues } from "./data";
-import { fetchSession, loginUser, logoutUser, saveAiSettings, signupUser } from "./services/apiClient";
+import { fetchSession, findLoginId, loginUser, logoutUser, resetPassword, saveAiSettings, signupUser } from "./services/apiClient";
 import { loadMedicalReportHistory, persistMedicalReport, requestMedicalAnalysis } from "./services/medicalAnalysisService";
 import { cancelLabReminder, cancelMedicationReminder, registerNotificationActionListener, scheduleLabReminder, scheduleMedicationReminder } from "./services/notificationService";
 import { extractLabMetricsFromImage, getSampleOcrPayload, ocrInstitutionPresets, ocrTemplates } from "./services/ocrService";
@@ -290,8 +290,10 @@ function App() {
   const [labSearchQuery, setLabSearchQuery] = useState("");
   const [authMode, setAuthMode] = useState("login");
   const [authForm, setAuthForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
+  const [recoveryForm, setRecoveryForm] = useState({ name: "", email: "", newPassword: "", confirmPassword: "" });
   const [autoLoginEnabled, setAutoLoginEnabled] = useState(() => localStorage.getItem(STORAGE_KEYS.autoLogin) !== "false");
   const [authError, setAuthError] = useState("");
+  const [authInfo, setAuthInfo] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
   const [profile, setProfile] = useState(loadStoredProfile);
   const [labs, setLabs] = useState(loadStoredLabs);
@@ -781,6 +783,7 @@ function App() {
     event.preventDefault();
     setAuthBusy(true);
     setAuthError("");
+    setAuthInfo("");
 
     try {
       const payload = authMode === "signup"
@@ -797,9 +800,53 @@ function App() {
         geminiModel: payload.user.settings?.geminiModel || "gemini-3-flash"
       });
       setAuthForm({ name: "", email: authForm.email, password: "", confirmPassword: "" });
+      setRecoveryForm({ name: "", email: authForm.email, newPassword: "", confirmPassword: "" });
+      setAuthInfo("");
       setActiveView("dashboard");
     } catch (error) {
       setAuthError(error.message || "로그인에 실패했습니다.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  function switchAuthMode(nextMode) {
+    setAuthMode(nextMode);
+    setAuthError("");
+    setAuthInfo("");
+  }
+
+  async function handleRecoverySubmit(event) {
+    event.preventDefault();
+    setAuthBusy(true);
+    setAuthError("");
+    setAuthInfo("");
+
+    try {
+      if (authMode === "find_id") {
+        const result = await findLoginId({ name: recoveryForm.name });
+        const message = result.matches?.length
+          ? `가입된 계정: ${result.matches.map((item) => item.emailMask).join(", ")}`
+          : "가입된 계정을 찾았습니다.";
+        setAuthInfo(message);
+        flashToast("아이디 찾기 결과를 확인해 주세요.", "success");
+        return;
+      }
+
+      if (recoveryForm.newPassword !== recoveryForm.confirmPassword) {
+        throw new Error("새 비밀번호와 비밀번호 확인이 서로 다릅니다.");
+      }
+
+      await resetPassword({
+        name: recoveryForm.name,
+        email: recoveryForm.email,
+        newPassword: recoveryForm.newPassword
+      });
+      setAuthInfo("비밀번호를 재설정했습니다. 새 비밀번호로 로그인해 주세요.");
+      setRecoveryForm({ name: "", email: "", newPassword: "", confirmPassword: "" });
+      flashToast("비밀번호 재설정이 완료되었습니다.", "success");
+    } catch (error) {
+      setAuthError(error.message || "계정 복구를 진행하지 못했습니다.");
     } finally {
       setAuthBusy(false);
     }
@@ -1976,6 +2023,11 @@ function App() {
   }
 
   if (!session) {
+    const isSignupMode = authMode === "signup";
+    const isFindIdMode = authMode === "find_id";
+    const isResetPasswordMode = authMode === "reset_password";
+    const isRecoveryMode = isFindIdMode || isResetPasswordMode;
+
     return (
       <div className="auth-shell">
         <div className="auth-hero">
@@ -1990,86 +2042,137 @@ function App() {
           </div>
         </div>
 
-        <form className="auth-card" onSubmit={handleAuthSubmit}>
+        <form className="auth-card" onSubmit={isRecoveryMode ? handleRecoverySubmit : handleAuthSubmit}>
           <div className="auth-form-head">
             <div>
-              <p className="eyebrow">{authMode === "login" ? "WELCOME BACK" : "CREATE ACCOUNT"}</p>
-              <h3 className="auth-form-title">{authMode === "login" ? "로그인" : "회원가입"}</h3>
+              <p className="eyebrow">{isSignupMode ? "CREATE ACCOUNT" : isFindIdMode ? "ACCOUNT LOOKUP" : isResetPasswordMode ? "RESET PASSWORD" : "WELCOME BACK"}</p>
+              <h3 className="auth-form-title">{isSignupMode ? "회원가입" : isFindIdMode ? "아이디 찾기" : isResetPasswordMode ? "비밀번호 재설정" : "로그인"}</h3>
               <p className="auth-form-copy">
-                {authMode === "login"
-                  ? "이메일과 비밀번호를 입력하고 바로 브리핑을 시작하세요."
-                  : "이름과 계정을 만들고 개인 혈액검사 브리핑을 시작하세요."}
+                {isSignupMode
+                  ? "이름과 계정을 만들고 개인 혈액검사 브리핑을 시작하세요."
+                  : isFindIdMode
+                    ? "가입한 이름을 입력하면 저장된 계정 이메일을 마스킹해서 안내해 드립니다."
+                    : isResetPasswordMode
+                      ? "이름과 이메일을 확인한 뒤 새 비밀번호를 다시 설정할 수 있습니다."
+                      : "이메일과 비밀번호를 입력하고 바로 브리핑을 시작하세요."}
               </p>
             </div>
             <button
               type="button"
               className="ghost-btn small auth-mode-link"
-              onClick={() => setAuthMode((current) => current === "login" ? "signup" : "login")}
+              onClick={() => switchAuthMode(isSignupMode ? "login" : "signup")}
             >
-              {authMode === "login" ? "회원가입" : "로그인으로 돌아가기"}
+              {isSignupMode ? "로그인으로 돌아가기" : "회원가입"}
             </button>
           </div>
 
-          {authMode === "signup" && (
+          {(isSignupMode || isFindIdMode || isResetPasswordMode) && (
             <label>
               이름
               <input
-                value={authForm.name}
-                onChange={(event) => setAuthForm((current) => ({ ...current, name: event.target.value }))}
-                placeholder="예: Pink Rainbow"
+                value={isSignupMode ? authForm.name : recoveryForm.name}
+                onChange={(event) => isSignupMode
+                  ? setAuthForm((current) => ({ ...current, name: event.target.value }))
+                  : setRecoveryForm((current) => ({ ...current, name: event.target.value }))}
+                placeholder={"예: Pink Rainbow 또는 강민성"}
               />
             </label>
           )}
 
-          <label>
+          {!isFindIdMode && <label>
             이메일
             <input
               type="email"
-              value={authForm.email}
-              onChange={(event) => setAuthForm((current) => ({ ...current, email: event.target.value }))}
+              value={isResetPasswordMode ? recoveryForm.email : authForm.email}
+              onChange={(event) => isResetPasswordMode
+                ? setRecoveryForm((current) => ({ ...current, email: event.target.value }))
+                : setAuthForm((current) => ({ ...current, email: event.target.value }))}
               placeholder="name@example.com"
             />
-          </label>
+          </label>}
 
-          <label>
+          {!isRecoveryMode && <label>
             비밀번호
             <input
               type="password"
               value={authForm.password}
               onChange={(event) => setAuthForm((current) => ({ ...current, password: event.target.value }))}
-              placeholder="6자 이상"
+              placeholder={"6자 이상"}
             />
-          </label>
+          </label>}
 
-          {authMode === "signup" && (
+          {isSignupMode && (
             <label>
               비밀번호 확인
               <input
                 type="password"
                 value={authForm.confirmPassword}
                 onChange={(event) => setAuthForm((current) => ({ ...current, confirmPassword: event.target.value }))}
-                placeholder="비밀번호를 다시 입력해 주세요"
+                placeholder={"비밀번호를 다시 입력해 주세요"}
               />
             </label>
           )}
 
-          <div className="auth-inline-actions">
-            <label className="check-row">
-              <input type="checkbox" checked={autoLoginEnabled} onChange={(event) => setAutoLoginEnabled(event.target.checked)} />
-              <span>자동 로그인 사용</span>
-            </label>
-            {localStorage.getItem(STORAGE_KEYS.token) ? (
-              <button type="button" className="ghost-btn small" onClick={handleSavedSessionLogin} disabled={authBusy}>
-                저장된 세션으로 로그인
+          {isResetPasswordMode && (
+            <>
+              <label>
+                새 비밀번호
+                <input
+                  type="password"
+                  value={recoveryForm.newPassword}
+                  onChange={(event) => setRecoveryForm((current) => ({ ...current, newPassword: event.target.value }))}
+                  placeholder={"6자 이상 새 비밀번호"}
+                />
+              </label>
+              <label>
+                새 비밀번호 확인
+                <input
+                  type="password"
+                  value={recoveryForm.confirmPassword}
+                  onChange={(event) => setRecoveryForm((current) => ({ ...current, confirmPassword: event.target.value }))}
+                  placeholder={"새 비밀번호를 다시 입력해 주세요"}
+                />
+              </label>
+            </>
+          )}
+
+          {!isRecoveryMode && (
+            <div className="auth-inline-actions">
+              <label className="check-row">
+                <input type="checkbox" checked={autoLoginEnabled} onChange={(event) => setAutoLoginEnabled(event.target.checked)} />
+                <span>자동 로그인 사용</span>
+              </label>
+              {localStorage.getItem(STORAGE_KEYS.token) ? (
+                <button type="button" className="ghost-btn small" onClick={handleSavedSessionLogin} disabled={authBusy}>
+                  저장된 세션으로 로그인
+                </button>
+              ) : null}
+            </div>
+          )}
+
+          {authMode === "login" && (
+            <div className="auth-recovery-row">
+              <button type="button" className="ghost-btn small auth-secondary-link" onClick={() => switchAuthMode("find_id")}>
+                아이디 찾기
               </button>
-            ) : null}
-          </div>
+              <button type="button" className="ghost-btn small auth-secondary-link" onClick={() => switchAuthMode("reset_password")}>
+                비밀번호 재설정
+              </button>
+            </div>
+          )}
 
           {authError && <div className="inline-error">{authError}</div>}
+          {authInfo && <div className="inline-note">{authInfo}</div>}
 
           <button className="primary-btn wide" type="submit" disabled={authBusy}>
-            {authBusy ? "처리 중..." : authMode === "signup" ? "계정 만들기" : "로그인"}
+            {authBusy ? "처리 중..." : isSignupMode ? "계정 만들기" : isFindIdMode ? "아이디 찾기" : isResetPasswordMode ? "비밀번호 재설정" : "로그인"}
           </button>
+
+          {isRecoveryMode && (
+            <button type="button" className="ghost-btn wide" onClick={() => switchAuthMode("login")} disabled={authBusy}>
+              로그인으로 돌아가기
+            </button>
+          )}
         </form>
       </div>
     );
@@ -2798,8 +2901,8 @@ function App() {
                         <input value={match.code} onChange={(event) => updateOcrMatch(index, "code", event.target.value)} placeholder="코드" />
                         <input type="number" step="0.1" value={match.value} onChange={(event) => updateOcrMatch(index, "value", event.target.value)} placeholder="값" />
                         <input value={match.unit || ""} onChange={(event) => updateOcrMatch(index, "unit", event.target.value)} placeholder="단위" />
-                        <input type="number" step="0.1" value={match.low ?? ""} onChange={(event) => updateOcrMatch(index, "low", event.target.value === "" ? "" : Number(event.target.value))} placeholder="하한" />
-                        <input type="number" step="0.1" value={match.high ?? ""} onChange={(event) => updateOcrMatch(index, "high", event.target.value === "" ? "" : Number(event.target.value))} placeholder="상한" />
+                        <input type="number" step="0.1" value={match.low ?? ""} onChange={(event) => updateOcrMatch(index, "low", event.target.value === "" ? "" : Number(event.target.value))} placeholder="??" />
+                        <input type="number" step="0.1" value={match.high ?? ""} onChange={(event) => updateOcrMatch(index, "high", event.target.value === "" ? "" : Number(event.target.value))} placeholder="??" />
                         <div className={`ocr-confidence status-${referenceStatus}`}>{Math.round((match.confidence || 0) * 100)}%</div>
                             </>
                           );
