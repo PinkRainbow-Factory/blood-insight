@@ -206,13 +206,14 @@ label { display: block; color: var(--muted); font-size: 14px; }
 .auth-hero-art {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 16px;
   margin-bottom: 16px;
   position: relative;
   z-index: 1;
   width: 100%;
   max-width: none;
+  min-height: 112px;
 }
 .hero-drop {
   position: relative;
@@ -220,9 +221,9 @@ label { display: block; color: var(--muted); font-size: 14px; }
   transform: rotate(18deg);
 }
 .hero-drop-main {
-  width: 92px;
-  height: 118px;
-  border-radius: 60px 60px 74px 74px / 50px 50px 90px 90px;
+  width: 90px;
+  height: 116px;
+  border-radius: 58% 58% 70% 70% / 42% 42% 88% 88%;
   background:
     radial-gradient(circle at 38% 24%, rgba(255, 235, 228, 0.3), transparent 18%),
     linear-gradient(180deg, #ff8f7f 0%, #ef6d6a 58%, #d74e56 100%);
@@ -231,23 +232,38 @@ label { display: block; color: var(--muted); font-size: 14px; }
     inset 0 1px 0 rgba(255,255,255,0.14);
   display: grid;
   place-items: center;
+  transform: rotate(-18deg);
+}
+.hero-drop-main::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 70% 70% 0 70%;
+  background: linear-gradient(180deg, rgba(255, 150, 136, 0.92) 0%, rgba(239, 109, 106, 0.86) 100%);
+  transform: translateX(-50%) rotate(44deg);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
 }
 .hero-drop-soft {
   position: absolute;
-  background: linear-gradient(180deg, rgba(255, 181, 168, 0.3), rgba(239, 109, 106, 0.12));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+  background: radial-gradient(circle at 38% 32%, rgba(255, 196, 186, 0.42), rgba(239, 109, 106, 0.14));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+  border-radius: 999px;
+  filter: blur(0.3px);
 }
 .hero-drop-left {
-  width: 28px;
-  height: 38px;
+  width: 24px;
+  height: 24px;
   left: 82px;
-  top: 12px;
+  top: 14px;
 }
 .hero-drop-right {
-  width: 18px;
-  height: 24px;
-  left: 112px;
-  top: 56px;
+  width: 16px;
+  height: 16px;
+  left: 110px;
+  top: 54px;
 }
 .hero-drop-core {
   width: 42px;
@@ -264,7 +280,10 @@ label { display: block; color: var(--muted); font-size: 14px; }
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
 }
 .hero-info-card {
-  margin-left: auto;
+  position: absolute;
+  right: 0;
+  top: 4px;
+  margin-left: 0;
   min-width: 0;
   max-width: 250px;
   padding: 14px 16px;
@@ -292,7 +311,7 @@ label { display: block; color: var(--muted); font-size: 14px; }
 .auth-hero-copy {
   position: relative;
   z-index: 1;
-  max-width: 64%;
+  max-width: 68%;
 }
 .auth-hero h1 {
   font-family: "Space Grotesk", sans-serif;
@@ -2683,10 +2702,16 @@ label { display: block; color: var(--muted); font-size: 14px; }
     align-items: flex-start;
     width: 100%;
     max-width: none;
+    min-height: 94px;
   }
   .hero-drop-main {
-    width: 76px;
+    width: 74px;
     height: 96px;
+  }
+  .hero-drop-main::after {
+    width: 24px;
+    height: 24px;
+    top: -10px;
   }
   .hero-drop-core {
     width: 36px;
@@ -2694,16 +2719,17 @@ label { display: block; color: var(--muted); font-size: 14px; }
     font-size: 22px;
   }
   .hero-drop-left {
-    left: 66px;
-    top: 8px;
+    left: 68px;
+    top: 10px;
   }
   .hero-drop-right {
     left: 92px;
-    top: 44px;
+    top: 46px;
   }
   .hero-info-card {
     max-width: 176px;
     padding: 12px 13px;
+    top: 0;
   }
   .hero-info-card strong {
     font-size: 13px;
