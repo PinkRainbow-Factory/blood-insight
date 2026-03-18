@@ -221,8 +221,8 @@ label { display: block; color: var(--muted); font-size: 14px; }
   transform: rotate(18deg);
 }
 .hero-drop-main {
-  width: 90px;
-  height: 116px;
+  width: 106px;
+  height: 136px;
   background: url("/auth-hero-blood-drop.svg") center / contain no-repeat;
   box-shadow:
     0 18px 36px rgba(239, 109, 106, 0.28),
@@ -239,16 +239,16 @@ label { display: block; color: var(--muted); font-size: 14px; }
   filter: blur(0.3px);
 }
 .hero-drop-left {
-  width: 24px;
-  height: 24px;
-  left: 82px;
-  top: 14px;
+  width: 26px;
+  height: 26px;
+  left: 94px;
+  top: 16px;
 }
 .hero-drop-right {
-  width: 16px;
-  height: 16px;
-  left: 110px;
-  top: 54px;
+  width: 18px;
+  height: 18px;
+  left: 128px;
+  top: 64px;
 }
 .hero-drop-core {
   display: none;
@@ -285,7 +285,7 @@ label { display: block; color: var(--muted); font-size: 14px; }
 .auth-hero-copy {
   position: relative;
   z-index: 1;
-  max-width: 68%;
+  max-width: 72%;
 }
 .auth-hero h1 {
   font-family: "Space Grotesk", sans-serif;
@@ -302,9 +302,17 @@ label { display: block; color: var(--muted); font-size: 14px; }
   margin: 0;
   font-size: 14px;
   line-height: 1.7;
-  max-width: 36ch;
+  max-width: none;
   word-break: keep-all;
   line-break: strict;
+}
+.hero-copy-two-line {
+  display: grid;
+  gap: 2px;
+}
+.hero-copy-two-line span {
+  display: block;
+  white-space: nowrap;
 }
 .auth-card {
   background: var(--surface-strong);
@@ -2681,19 +2689,19 @@ label { display: block; color: var(--muted); font-size: 14px; }
     min-height: 94px;
   }
   .hero-drop-main {
-    width: 74px;
-    height: 96px;
+    width: 88px;
+    height: 112px;
   }
   .hero-drop-core {
     display: none;
   }
   .hero-drop-left {
-    left: 68px;
-    top: 10px;
+    left: 76px;
+    top: 12px;
   }
   .hero-drop-right {
-    left: 92px;
-    top: 46px;
+    left: 104px;
+    top: 52px;
   }
   .hero-info-card {
     max-width: 176px;
@@ -2704,7 +2712,7 @@ label { display: block; color: var(--muted); font-size: 14px; }
     font-size: 13px;
   }
   .auth-hero-copy {
-    max-width: 74%;
+    max-width: 78%;
   }
   .auth-hero h1 {
     font-size: 22px;
