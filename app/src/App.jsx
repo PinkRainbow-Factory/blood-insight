@@ -2059,10 +2059,23 @@ function App() {
     return (
       <div className="auth-shell">
         <div className="auth-hero">
-          <h1><span>Blood Insight</span><br /><span>혈액으로 알아보는 나의 건강</span></h1>
-          <p>
-            혈액검사 결과를 읽기 쉽게 정리하고, 질환과 증상 맥락까지 함께 해설해 주는 개인 건강 AI 에이전트입니다.
-          </p>
+          <div className="auth-hero-art" aria-hidden="true">
+            <div className="hero-drop hero-drop-main">
+              <div className="hero-drop-core">i</div>
+            </div>
+            <div className="hero-drop hero-drop-soft hero-drop-left" />
+            <div className="hero-drop hero-drop-soft hero-drop-right" />
+            <div className="hero-info-card">
+              <span className="hero-info-label">BLOOD INSIGHT AGENT</span>
+              <strong>혈액 수치 · 질환 · 증상 브리핑</strong>
+            </div>
+          </div>
+          <div className="auth-hero-copy">
+            <h1><span>Blood Insight</span><br /><span>혈액으로 알아보는 나의 건강</span></h1>
+            <p>
+              혈액검사 결과를 읽기 쉽게 정리하고, 질환과 증상 맥락까지 함께 해설해 주는 개인 건강 AI 에이전트입니다.
+            </p>
+          </div>
           <div className="hero-checks">
             <span>회원 전용 기록 저장</span>
             <span>Gemini / ChatGPT 직접 입력</span>
