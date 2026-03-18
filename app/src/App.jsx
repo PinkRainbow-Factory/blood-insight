@@ -2061,7 +2061,12 @@ function App() {
         <div className="auth-hero">
           <div className="auth-hero-art" aria-hidden="true">
             <div className="hero-drop hero-drop-main">
-              <div className="hero-drop-core">i</div>
+              <div className="hero-drop-core">
+                <span className="hero-drop-line hero-drop-line-1" />
+                <span className="hero-drop-line hero-drop-line-2" />
+                <span className="hero-drop-line hero-drop-line-3" />
+                <span className="hero-drop-dot" />
+              </div>
             </div>
             <div className="hero-drop hero-drop-soft hero-drop-left" />
             <div className="hero-drop hero-drop-soft hero-drop-right" />
@@ -2073,7 +2078,9 @@ function App() {
           <div className="auth-hero-copy">
             <h1><span>Blood Insight</span><br /><span>혈액으로 알아보는 나의 건강</span></h1>
             <p>
-              혈액검사 결과를 읽기 쉽게 정리하고, 질환과 증상 맥락까지 함께 해설해 주는 개인 건강 AI 에이전트입니다.
+              혈액검사 결과를 읽기 쉽게 정리하고, 질환과 증상 맥락까지
+              <br />
+              함께 해설해 주는 개인 건강 AI 에이전트입니다.
             </p>
           </div>
           <div className="hero-checks">
