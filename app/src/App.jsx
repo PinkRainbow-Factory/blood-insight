@@ -5,6 +5,7 @@ import { loadMedicalReportHistory, persistMedicalReport, requestMedicalAnalysis 
 import { cancelLabReminder, cancelMedicationReminder, registerNotificationActionListener, scheduleLabReminder, scheduleMedicationReminder } from "./services/notificationService";
 import { extractLabMetricsFromImage, getSampleOcrPayload, ocrInstitutionPresets, ocrTemplates } from "./services/ocrService";
 import { exportReportImage, exportReportPdf, openExportedFile, shareReport } from "./services/reportExportService";
+import authHeroBloodDrop from "./assets/auth-hero-blood-drop.svg";
 
 const STORAGE_KEYS = {
   token: "bloodInsight.authToken",
@@ -2061,12 +2062,7 @@ function App() {
         <div className="auth-hero">
           <div className="auth-hero-art" aria-hidden="true">
             <div className="hero-drop hero-drop-main">
-              <div className="hero-drop-core">
-                <span className="hero-drop-line hero-drop-line-1" />
-                <span className="hero-drop-line hero-drop-line-2" />
-                <span className="hero-drop-line hero-drop-line-3" />
-                <span className="hero-drop-dot" />
-              </div>
+              <img src={authHeroBloodDrop} alt="" className="hero-drop-image" />
             </div>
             <div className="hero-drop hero-drop-soft hero-drop-left" />
             <div className="hero-drop hero-drop-soft hero-drop-right" />
@@ -2078,7 +2074,7 @@ function App() {
           <div className="auth-hero-copy">
             <h1><span>Blood Insight</span><br /><span>혈액으로 알아보는 나의 건강</span></h1>
             <p className="hero-copy-two-line">
-              <span>혈액 검사 결과를 읽기 쉽게 정리하고, 질환과 증상 맥락까지</span>
+              <span>혈액검사 결과를 읽기 쉽게 정리하고, 질환과 증상 맥락까지</span>
               <span>함께 해설해 주는 개인 건강 AI 에이전트입니다.</span>
             </p>
           </div>
