@@ -1,4 +1,4 @@
-import express from "express";
+癤퓁mport express from "express";
 import { requireAuth } from "../middleware/auth.js";
 import {
   createUser,
@@ -43,7 +43,7 @@ authRoute.post("/find-id", async (req, res) => {
     res.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to find account";
-    const status = message.includes("입력") || message.includes("찾지 못했습니다") ? 400 : 500;
+    const status = 400;
     res.status(status).json({ error: "find_id_failed", message });
   }
 });
@@ -55,7 +55,7 @@ authRoute.post("/reset-password", async (req, res) => {
     res.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to reset password";
-    const status = message.includes("입력") || message.includes("찾지 못했습니다") || message.includes("6자") ? 400 : 500;
+    const status = 400;
     res.status(status).json({ error: "reset_password_failed", message });
   }
 });

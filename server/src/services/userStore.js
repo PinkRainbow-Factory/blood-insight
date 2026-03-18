@@ -1,4 +1,4 @@
-import { promises as fs } from "fs";
+癤퓁mport { promises as fs } from "fs";
 import path from "path";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 
@@ -166,7 +166,7 @@ export async function loginUser({ email, password }) {
 export async function findLoginIds({ name }) {
   const cleanName = normalizeName(name);
   if (!cleanName) {
-    throw new Error("이름을 입력해 주세요.");
+    throw new Error("Name is required");
   }
 
   const store = await readStore();
@@ -180,7 +180,7 @@ export async function findLoginIds({ name }) {
     }));
 
   if (!matches.length) {
-    throw new Error("입력한 이름으로 가입된 계정을 찾지 못했습니다.");
+    throw new Error("No account matches this name");
   }
 
   return { matches };
@@ -192,17 +192,17 @@ export async function resetUserPassword({ name, email, newPassword }) {
   const cleanPassword = String(newPassword || "");
 
   if (!cleanName || !cleanEmail || !cleanPassword) {
-    throw new Error("이름, 이메일, 새 비밀번호를 모두 입력해 주세요.");
+    throw new Error("Name, email, and new password are required");
   }
 
   if (cleanPassword.length < 6) {
-    throw new Error("비밀번호는 6자 이상이어야 합니다.");
+    throw new Error("Password must be at least 6 characters");
   }
 
   const store = await readStore();
   const user = store.users.find((entry) => entry.name === cleanName && entry.email === cleanEmail);
   if (!user) {
-    throw new Error("입력한 이름과 이메일이 일치하는 계정을 찾지 못했습니다.");
+    throw new Error("No account matches this name and email");
   }
 
   const passwordBundle = createPasswordHash(cleanPassword);

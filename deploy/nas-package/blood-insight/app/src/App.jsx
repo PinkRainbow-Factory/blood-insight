@@ -1,17 +1,18 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { defaultProfile, diseaseCatalog, diseaseExpertGuides, diseasePlaybooks, metricDefinitions, sampleValues } from "./data";
-import { fetchSession, loginUser, logoutUser, saveAiSettings, signupUser } from "./services/apiClient";
+import { fetchSession, findLoginId, loginUser, logoutUser, resetPassword, saveAiSettings, signupUser } from "./services/apiClient";
 import { loadMedicalReportHistory, persistMedicalReport, requestMedicalAnalysis } from "./services/medicalAnalysisService";
 import { cancelLabReminder, cancelMedicationReminder, registerNotificationActionListener, scheduleLabReminder, scheduleMedicationReminder } from "./services/notificationService";
 import { extractLabMetricsFromImage, getSampleOcrPayload, ocrInstitutionPresets, ocrTemplates } from "./services/ocrService";
-import { exportReportImage, exportReportPdf, shareReport } from "./services/reportExportService";
+import { exportReportImage, exportReportPdf, openExportedFile, shareReport } from "./services/reportExportService";
 
 const STORAGE_KEYS = {
   token: "bloodInsight.authToken",
   autoLogin: "bloodInsight.autoLogin",
   profile: "bloodInsight.profile",
   labs: "bloodInsight.labs",
-  customLabs: "bloodInsight.customLabs"
+  customLabs: "bloodInsight.customLabs",
+  autoOpenExport: "bloodInsight.autoOpenExport"
 };
 
 const NAV_ITEMS = [
@@ -31,6 +32,34 @@ function safeParse(rawValue, fallback) {
   } catch {
     return fallback;
   }
+}
+
+function mapRecoveryErrorMessage(message, mode) {
+  const text = String(message || "");
+
+  if (text.includes("Name is required")) {
+    return "??? ??? ???.";
+  }
+
+  if (text.includes("No account matches this name and email")) {
+    return "??? ??? ???? ???? ??? ?? ?????.";
+  }
+
+  if (text.includes("No account matches this name")) {
+    return "??? ???? ??? ??? ?? ?????.";
+  }
+
+  if (text.includes("Name, email, and new password are required")) {
+    return "??, ???, ? ????? ?? ??? ???.";
+  }
+
+  if (text.includes("Password must be at least 6 characters")) {
+    return "????? 6? ????? ???.";
+  }
+
+  return mode === "find_id"
+    ? "??? ??? ???? ?????."
+    : "???? ???? ???? ?????.";
 }
 
 function loadStoredProfile() {
@@ -191,7 +220,7 @@ function formatStatusLabel(status) {
     normal: "정상 범위",
     high: "높음",
     low: "낮음",
-    unknown: "참고범위 없음"
+    unknown: "범위 없음"
   };
 
   return labels[status] || "확인 필요";
@@ -272,7 +301,7 @@ function StatusPill({ status }) {
     high: "높음",
     low: "낮음",
     borderline: "확인 필요",
-    unknown: "참고범위 없음"
+    unknown: "범위 없음"
   };
 
   return <span className={`status-pill status-${status}`}>{labels[status] || "확인 필요"}</span>;
@@ -289,8 +318,10 @@ function App() {
   const [labSearchQuery, setLabSearchQuery] = useState("");
   const [authMode, setAuthMode] = useState("login");
   const [authForm, setAuthForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
+  const [recoveryForm, setRecoveryForm] = useState({ name: "", email: "", newPassword: "", confirmPassword: "" });
   const [autoLoginEnabled, setAutoLoginEnabled] = useState(() => localStorage.getItem(STORAGE_KEYS.autoLogin) !== "false");
   const [authError, setAuthError] = useState("");
+  const [authInfo, setAuthInfo] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
   const [profile, setProfile] = useState(loadStoredProfile);
   const [labs, setLabs] = useState(loadStoredLabs);
@@ -323,6 +354,7 @@ function App() {
   const [reportActionLabel, setReportActionLabel] = useState("");
   const [historyCompareIds, setHistoryCompareIds] = useState([]);
   const [toast, setToast] = useState(null);
+  const [autoOpenExport, setAutoOpenExport] = useState(() => localStorage.getItem(STORAGE_KEYS.autoOpenExport) === "true");
 
   const selectedDisease = useMemo(
     () => diseaseCatalog.find((disease) => disease.code === profile.diseaseCode) || null,
@@ -471,6 +503,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.customLabs, JSON.stringify(customLabs));
   }, [customLabs]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.autoOpenExport, autoOpenExport ? "true" : "false");
+  }, [autoOpenExport]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.autoLogin, String(autoLoginEnabled));
@@ -775,6 +811,7 @@ function App() {
     event.preventDefault();
     setAuthBusy(true);
     setAuthError("");
+    setAuthInfo("");
 
     try {
       const payload = authMode === "signup"
@@ -791,9 +828,53 @@ function App() {
         geminiModel: payload.user.settings?.geminiModel || "gemini-3-flash"
       });
       setAuthForm({ name: "", email: authForm.email, password: "", confirmPassword: "" });
+      setRecoveryForm({ name: "", email: authForm.email, newPassword: "", confirmPassword: "" });
+      setAuthInfo("");
       setActiveView("dashboard");
     } catch (error) {
       setAuthError(error.message || "로그인에 실패했습니다.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  function switchAuthMode(nextMode) {
+    setAuthMode(nextMode);
+    setAuthError("");
+    setAuthInfo("");
+  }
+
+  async function handleRecoverySubmit(event) {
+    event.preventDefault();
+    setAuthBusy(true);
+    setAuthError("");
+    setAuthInfo("");
+
+    try {
+      if (authMode === "find_id") {
+        const result = await findLoginId({ name: recoveryForm.name });
+        const message = result.matches?.length
+          ? `가입된 계정: ${result.matches.map((item) => item.emailMask).join(", ")}`
+          : "가입된 계정을 찾았습니다.";
+        setAuthInfo(message);
+        flashToast("아이디 찾기 결과를 확인해 주세요.", "success");
+        return;
+      }
+
+      if (recoveryForm.newPassword !== recoveryForm.confirmPassword) {
+        throw new Error("새 비밀번호와 비밀번호 확인이 서로 다릅니다.");
+      }
+
+      await resetPassword({
+        name: recoveryForm.name,
+        email: recoveryForm.email,
+        newPassword: recoveryForm.newPassword
+      });
+      setAuthInfo("비밀번호를 재설정했습니다. 새 비밀번호로 로그인해 주세요.");
+      setRecoveryForm({ name: "", email: "", newPassword: "", confirmPassword: "" });
+      flashToast("비밀번호 재설정이 완료되었습니다.", "success");
+    } catch (error) {
+      setAuthError(error.message || "계정 복구를 진행하지 못했습니다.");
     } finally {
       setAuthBusy(false);
     }
@@ -1219,6 +1300,13 @@ function App() {
         symptomBrief,
         clinicianQuestions: enhancedClinicianQuestions
       });
+      if (autoOpenExport && result?.uri) {
+        await openExportedFile({
+          uri: result.uri,
+          title: "PDF 리포트 열기",
+          text: "방금 생성한 PDF 리포트를 열거나 공유할 수 있습니다."
+        });
+      }
       setReportActionMessage(result.message || "PDF 저장을 완료했습니다.");
       flashToast(result.message || "PDF 저장을 완료했습니다.", "success");
     } catch (error) {
@@ -1254,6 +1342,13 @@ function App() {
         symptomBrief,
         clinicianQuestions: enhancedClinicianQuestions
       });
+      if (autoOpenExport && result?.uri) {
+        await openExportedFile({
+          uri: result.uri,
+          title: "이미지 리포트 열기",
+          text: "방금 생성한 리포트 이미지를 열거나 공유할 수 있습니다."
+        });
+      }
       setReportActionMessage(result.message || "리포트 이미지를 저장했습니다.");
       flashToast(result.message || "리포트 이미지를 저장했습니다.", "success");
     } catch (error) {
@@ -1956,11 +2051,15 @@ function App() {
   }
 
   if (!session) {
+    const isSignupMode = authMode === "signup";
+    const isFindIdMode = authMode === "find_id";
+    const isResetPasswordMode = authMode === "reset_password";
+    const isRecoveryMode = isFindIdMode || isResetPasswordMode;
+
     return (
       <div className="auth-shell">
         <div className="auth-hero">
-          <div className="brand-badge">Blood Insight</div>
-          <h1>Blood Insight, 혈액으로 알아보는 나의 건강</h1>
+          <h1><span>Blood Insight</span><br /><span>혈액으로 알아보는 나의 건강</span></h1>
           <p>
             혈액검사 결과를 읽기 쉽게 정리하고, 질환과 증상 맥락까지 함께 해설해 주는 개인 건강 AI 에이전트입니다.
           </p>
@@ -1971,86 +2070,137 @@ function App() {
           </div>
         </div>
 
-        <form className="auth-card" onSubmit={handleAuthSubmit}>
+        <form className="auth-card" onSubmit={isRecoveryMode ? handleRecoverySubmit : handleAuthSubmit}>
           <div className="auth-form-head">
             <div>
-              <p className="eyebrow">{authMode === "login" ? "WELCOME BACK" : "CREATE ACCOUNT"}</p>
-              <h3 className="auth-form-title">{authMode === "login" ? "로그인" : "회원가입"}</h3>
+              <p className="eyebrow">{isSignupMode ? "CREATE ACCOUNT" : isFindIdMode ? "ACCOUNT LOOKUP" : isResetPasswordMode ? "RESET PASSWORD" : "WELCOME BACK"}</p>
+              <h3 className="auth-form-title">{isSignupMode ? "회원가입" : isFindIdMode ? "아이디 찾기" : isResetPasswordMode ? "비밀번호 재설정" : "로그인"}</h3>
               <p className="auth-form-copy">
-                {authMode === "login"
-                  ? "이메일과 비밀번호를 입력하고 바로 브리핑을 시작하세요."
-                  : "이름과 계정을 만들고 개인 혈액검사 브리핑을 시작하세요."}
+                {isSignupMode
+                  ? "이름과 계정을 만들고 개인 혈액검사 브리핑을 시작하세요."
+                  : isFindIdMode
+                    ? "가입한 이름을 입력하면 저장된 계정 이메일을 마스킹해서 안내해 드립니다."
+                    : isResetPasswordMode
+                      ? "이름과 이메일을 확인한 뒤 새 비밀번호를 다시 설정할 수 있습니다."
+                      : "이메일과 비밀번호를 입력하고 바로 브리핑을 시작하세요."}
               </p>
             </div>
             <button
               type="button"
               className="ghost-btn small auth-mode-link"
-              onClick={() => setAuthMode((current) => current === "login" ? "signup" : "login")}
+              onClick={() => switchAuthMode(isSignupMode ? "login" : "signup")}
             >
-              {authMode === "login" ? "회원가입" : "로그인으로 돌아가기"}
+              {isSignupMode ? "로그인으로 돌아가기" : "회원가입"}
             </button>
           </div>
 
-          {authMode === "signup" && (
+          {(isSignupMode || isFindIdMode || isResetPasswordMode) && (
             <label>
               이름
               <input
-                value={authForm.name}
-                onChange={(event) => setAuthForm((current) => ({ ...current, name: event.target.value }))}
-                placeholder="예: Pink Rainbow"
+                value={isSignupMode ? authForm.name : recoveryForm.name}
+                onChange={(event) => isSignupMode
+                  ? setAuthForm((current) => ({ ...current, name: event.target.value }))
+                  : setRecoveryForm((current) => ({ ...current, name: event.target.value }))}
+                placeholder={"예: Pink Rainbow 또는 강민성"}
               />
             </label>
           )}
 
-          <label>
+          {!isFindIdMode && <label>
             이메일
             <input
               type="email"
-              value={authForm.email}
-              onChange={(event) => setAuthForm((current) => ({ ...current, email: event.target.value }))}
+              value={isResetPasswordMode ? recoveryForm.email : authForm.email}
+              onChange={(event) => isResetPasswordMode
+                ? setRecoveryForm((current) => ({ ...current, email: event.target.value }))
+                : setAuthForm((current) => ({ ...current, email: event.target.value }))}
               placeholder="name@example.com"
             />
-          </label>
+          </label>}
 
-          <label>
+          {!isRecoveryMode && <label>
             비밀번호
             <input
               type="password"
               value={authForm.password}
               onChange={(event) => setAuthForm((current) => ({ ...current, password: event.target.value }))}
-              placeholder="6자 이상"
+              placeholder={"6자 이상"}
             />
-          </label>
+          </label>}
 
-          {authMode === "signup" && (
+          {isSignupMode && (
             <label>
               비밀번호 확인
               <input
                 type="password"
                 value={authForm.confirmPassword}
                 onChange={(event) => setAuthForm((current) => ({ ...current, confirmPassword: event.target.value }))}
-                placeholder="비밀번호를 다시 입력해 주세요"
+                placeholder={"비밀번호를 다시 입력해 주세요"}
               />
             </label>
           )}
 
-          <div className="auth-inline-actions">
-            <label className="check-row">
-              <input type="checkbox" checked={autoLoginEnabled} onChange={(event) => setAutoLoginEnabled(event.target.checked)} />
-              <span>자동 로그인 사용</span>
-            </label>
-            {localStorage.getItem(STORAGE_KEYS.token) ? (
-              <button type="button" className="ghost-btn small" onClick={handleSavedSessionLogin} disabled={authBusy}>
-                저장된 세션으로 로그인
+          {isResetPasswordMode && (
+            <>
+              <label>
+                새 비밀번호
+                <input
+                  type="password"
+                  value={recoveryForm.newPassword}
+                  onChange={(event) => setRecoveryForm((current) => ({ ...current, newPassword: event.target.value }))}
+                  placeholder={"6자 이상 새 비밀번호"}
+                />
+              </label>
+              <label>
+                새 비밀번호 확인
+                <input
+                  type="password"
+                  value={recoveryForm.confirmPassword}
+                  onChange={(event) => setRecoveryForm((current) => ({ ...current, confirmPassword: event.target.value }))}
+                  placeholder={"새 비밀번호를 다시 입력해 주세요"}
+                />
+              </label>
+            </>
+          )}
+
+          {!isRecoveryMode && (
+            <div className="auth-inline-actions">
+              <label className="check-row">
+                <input type="checkbox" checked={autoLoginEnabled} onChange={(event) => setAutoLoginEnabled(event.target.checked)} />
+                <span>자동 로그인 사용</span>
+              </label>
+              {localStorage.getItem(STORAGE_KEYS.token) ? (
+                <button type="button" className="ghost-btn small" onClick={handleSavedSessionLogin} disabled={authBusy}>
+                  저장된 세션으로 로그인
+                </button>
+              ) : null}
+            </div>
+          )}
+
+          {authMode === "login" && (
+            <div className="auth-recovery-row">
+              <button type="button" className="ghost-btn small auth-secondary-link" onClick={() => switchAuthMode("find_id")}>
+                아이디 찾기
               </button>
-            ) : null}
-          </div>
+              <button type="button" className="ghost-btn small auth-secondary-link" onClick={() => switchAuthMode("reset_password")}>
+                비밀번호 재설정
+              </button>
+            </div>
+          )}
 
           {authError && <div className="inline-error">{authError}</div>}
+          {authInfo && <div className="inline-note">{authInfo}</div>}
 
           <button className="primary-btn wide" type="submit" disabled={authBusy}>
-            {authBusy ? "처리 중..." : authMode === "signup" ? "계정 만들기" : "로그인"}
+            {authBusy ? "처리 중..." : isSignupMode ? "계정 만들기" : isFindIdMode ? "아이디 찾기" : isResetPasswordMode ? "비밀번호 재설정" : "로그인"}
           </button>
+
+          {isRecoveryMode && (
+            <button type="button" className="ghost-btn wide" onClick={() => switchAuthMode("login")} disabled={authBusy}>
+              로그인으로 돌아가기
+            </button>
+          )}
         </form>
       </div>
     );
@@ -2112,6 +2262,7 @@ function App() {
           <div className="topbar-status-row">
             <span className="chip accent">{settingsDraft.provider === "gemini" ? "Gemini" : "ChatGPT"}</span>
                 <span className={`chip ${readiness.apiKey ? "good" : "warn"}`}>{readiness.apiKey ? "AI 연결 완료" : "AI 설정 필요"}</span>
+            <button type="button" className="ghost-btn small topbar-logout-btn" onClick={handleLogout}>로그아웃</button>
           </div>
         </header>
 
@@ -2122,7 +2273,7 @@ function App() {
                 <span className="chip accent">Blood Insight</span>
                 <span className="chip">혈액으로 알아보는 나의 건강</span>
               </div>
-              <h3>Blood Insight, 혈액으로 알아보는 나의 건강</h3>
+              <h3><span>Blood Insight,</span><br /><span>혈액으로 알아보는 나의 건강</span></h3>
               <p>
               혈액 수치, 증상, 질환, 복약 일정을 함께 읽어주는 개인 맞춤형 건강 브리핑 대시보드입니다.
               </p>
@@ -2288,33 +2439,36 @@ function App() {
                     </div>
                   </label>
                 </div>
-                <div className="symptom-picker-shell">
-                  <details className="symptom-picker">
-                    <summary className="ghost-btn small">
-                      증상 선택 {(profile.symptomTags || []).length ? `(${(profile.symptomTags || []).length}개)` : ""}
-                    </summary>
-                    <div className="symptom-checklist-grid">
-                      {SYMPTOM_TAG_OPTIONS.map((tag) => (
-                        <button
-                          key={tag}
-                          type="button"
-                          className={`symptom-tag-btn ${(profile.symptomTags || []).includes(tag) ? "active" : ""}`}
-                          onClick={() => toggleSymptomTag(tag)}
-                        >
-                          {tag}
-                        </button>
-                      ))}
+                <div className="symptom-picker-panel">
+                  <div className="symptom-picker-shell">
+                    <details className="symptom-picker">
+                      <summary className="ghost-btn small">
+                        <span className="collapsed-label">증상 선택</span>
+                        <span className="expanded-label">접기</span>
+                        {(profile.symptomTags || []).length ? ` (${(profile.symptomTags || []).length}개)` : ""}
+                      </summary>
+                      <div className="symptom-checklist-grid">
+                        {SYMPTOM_TAG_OPTIONS.map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            className={`symptom-tag-btn ${(profile.symptomTags || []).includes(tag) ? "active" : ""}`}
+                            onClick={() => toggleSymptomTag(tag)}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                    </details>
+                    <div className="symptom-selected-row">
+                      {(profile.symptomTags || []).length ? (
+                        (profile.symptomTags || []).map((tag) => (
+                          <span key={`selected-${tag}`} className="chip good">{tag}</span>
+                        ))
+                      ) : null}
                     </div>
-                  </details>
-                  <div className="symptom-selected-row">
-                    {(profile.symptomTags || []).length ? (
-                      (profile.symptomTags || []).map((tag) => (
-                        <span key={`selected-${tag}`} className="chip good">{tag}</span>
-                      ))
-                    ) : (
-                      <span className="inline-note">선택한 증상이 아직 없습니다. 필요한 항목만 골라 두면 문진 카드가 더 간결해집니다.</span>
-                    )}
                   </div>
+                  <div className="inline-note symptom-inline-note">선택한 증상이 아직 없습니다. 필요한 항목만 골라 두면 문진 카드가 더 간결해집니다.</div>
                 </div>
                 <div className="form-grid symptom-grid">
                   <label>
@@ -2523,7 +2677,7 @@ function App() {
                     return (
                       <button key={metric.code} type="button" className={`metric-card ${isOcrMerged ? "metric-card-merged" : ""}`} onClick={() => setSelectedMetricCode(metric.code)}>
                         <div className="metric-head">
-                          <div>
+                          <div className="metric-title-stack">
                             <strong>{metric.name}</strong>
                             <span>{metric.code}</span>
                           </div>
@@ -2541,8 +2695,20 @@ function App() {
                           />
                         </label>
                         <div className="metric-footer">
-                          <span>{formatMetricValue(metricValue)} {metric.unit}</span>
-                          <small>{Number.isFinite(metric.range.low) && Number.isFinite(metric.range.high) ? `정상 ${metric.range.low} - ${metric.range.high}` : "참고 범위 직접 입력 가능"}</small>
+                          <span className="metric-reading">{formatMetricValue(metricValue)} {metric.unit}</span>
+                          <small className="metric-range-copy">
+                            {Number.isFinite(metric.range.low) && Number.isFinite(metric.range.high) ? (
+                              <>
+                                <span className="metric-range-label">정상</span>
+                                <span className="metric-range-value">{metric.range.low} - {metric.range.high}</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="metric-range-label">범위</span>
+                                <span className="metric-range-value">직접 입력 가능</span>
+                              </>
+                            )}
+                          </small>
                         </div>
                         {Number.isFinite(metric.range.low) && Number.isFinite(metric.range.high) && (
                           <div className="range-bar">
@@ -2596,126 +2762,142 @@ function App() {
                 </div>
               )}
               {!filteredLabMetrics.length && <div className="empty-card">현재 조건에 맞는 혈액검사 항목이 없습니다. 탭을 바꾸거나 검색어를 비워 보세요.</div>}
-              <div className="custom-lab-panel">
-                <div className="section-head">
-                  <h3>커스텀 항목 추가</h3>
-                  <span className="chip accent">수동 추가</span>
-                </div>
-                <div className="form-grid">
-                  <label>
-                    항목명
-                    <input value={customLabDraft.name} onChange={(event) => setCustomLabDraft((current) => ({ ...current, name: event.target.value }))} placeholder="예: LDL, TSH, Magnesium" />
-                  </label>
-                  <label>
-                    코드
-                    <input value={customLabDraft.code} onChange={(event) => setCustomLabDraft((current) => ({ ...current, code: event.target.value }))} placeholder="예: LDL" />
-                  </label>
-                  <label>
-                    값
-                    <input type="number" step="0.1" value={customLabDraft.value} onChange={(event) => setCustomLabDraft((current) => ({ ...current, value: event.target.value }))} />
-                  </label>
-                  <label>
-                    단위
-                    <input value={customLabDraft.unit} onChange={(event) => setCustomLabDraft((current) => ({ ...current, unit: event.target.value }))} placeholder="mg/dL" />
-                  </label>
-                  <label>
-                    참고범위 하한
-                    <input type="number" step="0.1" value={customLabDraft.low} onChange={(event) => setCustomLabDraft((current) => ({ ...current, low: event.target.value }))} />
-                  </label>
-                  <label>
-                    참고범위 상한
-                    <input type="number" step="0.1" value={customLabDraft.high} onChange={(event) => setCustomLabDraft((current) => ({ ...current, high: event.target.value }))} />
-                  </label>
-                </div>
-                <div className="cta-row">
-                  <button type="button" className="ghost-btn" onClick={handleAddCustomLab}>커스텀 항목 추가</button>
-                </div>
-                <div className="history-grid">
-                  {customLabs.map((item, index) => (
-                    <div className="history-card" key={`${item.code}-${index}`}>
-                      <div className="history-topline">
-                        <strong>{item.name}</strong>
-                        <button type="button" className="ghost-btn small" onClick={() => removeCustomLab(index)}>삭제</button>
+              <details className="custom-lab-panel collapsible-card">
+                <summary className="collapsible-summary">
+                  <div>
+                    <strong>커스텀 항목 추가</strong>
+                    <small>필요한 혈액검사 항목을 직접 추가합니다.</small>
+                  </div>
+                  <span className="chip accent collapsible-state-chip">
+                    <span className="collapsed-label">수동 추가</span>
+                    <span className="expanded-label">접기</span>
+                  </span>
+                </summary>
+                <div className="collapsible-body">
+                  <div className="form-grid">
+                    <label>
+                      항목명
+                      <input value={customLabDraft.name} onChange={(event) => setCustomLabDraft((current) => ({ ...current, name: event.target.value }))} placeholder="예: LDL, TSH, Magnesium" />
+                    </label>
+                    <label>
+                      코드
+                      <input value={customLabDraft.code} onChange={(event) => setCustomLabDraft((current) => ({ ...current, code: event.target.value }))} placeholder="예: LDL" />
+                    </label>
+                    <label>
+                      값
+                      <input type="number" step="0.1" value={customLabDraft.value} onChange={(event) => setCustomLabDraft((current) => ({ ...current, value: event.target.value }))} />
+                    </label>
+                    <label>
+                      단위
+                      <input value={customLabDraft.unit} onChange={(event) => setCustomLabDraft((current) => ({ ...current, unit: event.target.value }))} placeholder="mg/dL" />
+                    </label>
+                    <label>
+                      참고범위 하한
+                      <input type="number" step="0.1" value={customLabDraft.low} onChange={(event) => setCustomLabDraft((current) => ({ ...current, low: event.target.value }))} />
+                    </label>
+                    <label>
+                      참고범위 상한
+                      <input type="number" step="0.1" value={customLabDraft.high} onChange={(event) => setCustomLabDraft((current) => ({ ...current, high: event.target.value }))} />
+                    </label>
+                  </div>
+                  <div className="cta-row">
+                    <button type="button" className="ghost-btn" onClick={handleAddCustomLab}>커스텀 항목 추가</button>
+                  </div>
+                  <div className="history-grid">
+                    {customLabs.map((item, index) => (
+                      <div className="history-card" key={`${item.code}-${index}`}>
+                        <div className="history-topline">
+                          <strong>{item.name}</strong>
+                          <button type="button" className="ghost-btn small" onClick={() => removeCustomLab(index)}>삭제</button>
+                        </div>
+                        <div className="form-grid">
+                          <label>
+                            값
+                            <input type="number" step="0.1" value={item.value} onChange={(event) => updateCustomLab(index, "value", event.target.value === "" ? "" : Number(event.target.value))} />
+                          </label>
+                          <label>
+                            단위
+                            <input value={item.unit} onChange={(event) => updateCustomLab(index, "unit", event.target.value)} />
+                          </label>
+                          <label>
+                            참고범위 하한
+                            <input type="number" step="0.1" value={item.low} onChange={(event) => updateCustomLab(index, "low", event.target.value)} />
+                          </label>
+                          <label>
+                            참고범위 상한
+                            <input type="number" step="0.1" value={item.high} onChange={(event) => updateCustomLab(index, "high", event.target.value)} />
+                          </label>
+                        </div>
                       </div>
-                      <div className="form-grid">
-                        <label>
-                          값
-                          <input type="number" step="0.1" value={item.value} onChange={(event) => updateCustomLab(index, "value", event.target.value === "" ? "" : Number(event.target.value))} />
-                        </label>
-                        <label>
-                          단위
-                          <input value={item.unit} onChange={(event) => updateCustomLab(index, "unit", event.target.value)} />
-                        </label>
-                        <label>
-                          참고범위 하한
-                          <input type="number" step="0.1" value={item.low} onChange={(event) => updateCustomLab(index, "low", event.target.value)} />
-                        </label>
-                        <label>
-                          참고범위 상한
-                          <input type="number" step="0.1" value={item.high} onChange={(event) => updateCustomLab(index, "high", event.target.value)} />
-                        </label>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </details>
             </article>
 
             <article className="glass-card">
-              <div className="section-head">
-                <h3>사진 / 캡처 OCR</h3>
-                <span className="chip">촬영 / 업로드</span>
-              </div>
-              <label className="upload-zone">
-                <input type="file" accept="image/*" capture="environment" onChange={handleImageChange} />
-                <div>
-                  <strong>검사표 사진 촬영 또는 업로드</strong>
-                  <p>카메라 촬영, 앨범 선택, 캡처본 업로드를 모두 지원합니다. OCR 후 직접 검토하고 반영할 수 있습니다.</p>
-                </div>
-              </label>
-              {uploadedImage && <div className="image-preview"><img src={uploadedImage} alt="검사표 미리보기" /></div>}
-              <div className="cta-row">
-                <button type="button" className="primary-btn" onClick={handleRunOcr} disabled={ocrBusy}>{ocrBusy ? "OCR 분석 중..." : "OCR 분석"}</button>
-                <button
-                  type="button"
-                  className="ghost-btn"
-                  onClick={() => setOcrResult(normalizeOcrPayload(getSampleOcrPayload(profile.ocrTemplate || "general", profile.ocrInstitutionPreset || "generic")))}
-                >
-                  샘플 OCR
-                </button>
-              </div>
-              <div className="empty-card">OCR이 모르는 항목은 커스텀 혈액검사로 자동 연결하거나 직접 추가해서 AI 해설에 포함할 수 있게 설계되어 있습니다.</div>
-              <label>
-                OCR 템플릿 모드
-                <select value={profile.ocrTemplate || "general"} onChange={(event) => updateProfile("ocrTemplate", event.target.value)}>
-                  {ocrTemplates.map((template) => (
-                    <option key={template.id} value={template.id}>{template.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                검사기관 프리셋
-                <select value={profile.ocrInstitutionPreset || "generic"} onChange={(event) => updateProfile("ocrInstitutionPreset", event.target.value)}>
-                  {ocrInstitutionPresets.map((preset) => (
-                    <option key={preset.id} value={preset.id}>{preset.label}</option>
-                  ))}
-                </select>
-              </label>
-              <div className="inline-note">
-                {ocrTemplates.find((template) => template.id === (profile.ocrTemplate || "general"))?.helper}
-              </div>
-              <div className="inline-note">
-                {ocrInstitutionPresets.find((preset) => preset.id === (profile.ocrInstitutionPreset || "generic"))?.helper}
-              </div>
-
-              {ocrResult && (
-                <div className="ocr-panel">
-                  <div className="ocr-toolbar">
-                    <span className="chip">검토 후 반영</span>
-                    <button type="button" className="ghost-btn small" onClick={handleAddOcrRow}>행 추가</button>
+              <details className="ocr-collapsible-card collapsible-card">
+                <summary className="collapsible-summary">
+                  <div>
+                    <strong>사진 / 캡처 OCR</strong>
+                    <small>촬영 · 업로드 후 OCR로 항목을 추출합니다.</small>
                   </div>
-                  <div className="inline-note">OCR이 인식한 항목은 표준 코드로 정리되고, 필요하면 검사표 그대로 새 항목을 추가할 수 있습니다.</div>
-                  <div className="ocr-table">
+                  <span className="chip collapsible-state-chip">
+                    <span className="collapsed-label">촬영 / 업로드</span>
+                    <span className="expanded-label">접기</span>
+                  </span>
+                </summary>
+                <div className="collapsible-body">
+                  <label className="upload-zone">
+                    <input type="file" accept="image/*" capture="environment" onChange={handleImageChange} />
+                    <div>
+                      <strong>검사표 사진 촬영 또는 업로드</strong>
+                      <p>카메라 촬영, 앨범 선택, 캡처본 업로드를 모두 지원합니다. OCR 후 직접 검토하고 반영할 수 있습니다.</p>
+                    </div>
+                  </label>
+                  {uploadedImage && <div className="image-preview"><img src={uploadedImage} alt="검사표 미리보기" /></div>}
+                  <div className="cta-row">
+                    <button type="button" className="primary-btn" onClick={handleRunOcr} disabled={ocrBusy}>{ocrBusy ? "OCR 분석 중..." : "OCR 분석"}</button>
+                    <button
+                      type="button"
+                      className="ghost-btn"
+                      onClick={() => setOcrResult(normalizeOcrPayload(getSampleOcrPayload(profile.ocrTemplate || "general", profile.ocrInstitutionPreset || "generic")))}
+                    >
+                      샘플 OCR
+                    </button>
+                  </div>
+                  <div className="empty-card">OCR이 모르는 항목은 커스텀 혈액검사로 자동 연결하거나 직접 추가해서 AI 해설에 포함할 수 있게 설계되어 있습니다.</div>
+                  <label>
+                    OCR 템플릿 모드
+                    <select value={profile.ocrTemplate || "general"} onChange={(event) => updateProfile("ocrTemplate", event.target.value)}>
+                      {ocrTemplates.map((template) => (
+                        <option key={template.id} value={template.id}>{template.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    검사기관 프리셋
+                    <select value={profile.ocrInstitutionPreset || "generic"} onChange={(event) => updateProfile("ocrInstitutionPreset", event.target.value)}>
+                      {ocrInstitutionPresets.map((preset) => (
+                        <option key={preset.id} value={preset.id}>{preset.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="inline-note">
+                    {ocrTemplates.find((template) => template.id === (profile.ocrTemplate || "general"))?.helper}
+                  </div>
+                  <div className="inline-note">
+                    {ocrInstitutionPresets.find((preset) => preset.id === (profile.ocrInstitutionPreset || "generic"))?.helper}
+                  </div>
+
+                  {ocrResult && (
+                    <div className="ocr-panel">
+                      <div className="ocr-toolbar">
+                        <span className="chip">검토 후 반영</span>
+                        <button type="button" className="ghost-btn small" onClick={handleAddOcrRow}>행 추가</button>
+                      </div>
+                      <div className="inline-note">OCR이 인식한 항목은 표준 코드로 정리되고, 필요하면 검사표 그대로 새 항목을 추가할 수 있습니다.</div>
+                      <div className="ocr-table">
                     <div className="ocr-table-head">
                       <span>사용</span>
                       <span>항목명</span>
@@ -2747,8 +2929,8 @@ function App() {
                         <input value={match.code} onChange={(event) => updateOcrMatch(index, "code", event.target.value)} placeholder="코드" />
                         <input type="number" step="0.1" value={match.value} onChange={(event) => updateOcrMatch(index, "value", event.target.value)} placeholder="값" />
                         <input value={match.unit || ""} onChange={(event) => updateOcrMatch(index, "unit", event.target.value)} placeholder="단위" />
-                        <input type="number" step="0.1" value={match.low ?? ""} onChange={(event) => updateOcrMatch(index, "low", event.target.value === "" ? "" : Number(event.target.value))} placeholder="하한" />
-                        <input type="number" step="0.1" value={match.high ?? ""} onChange={(event) => updateOcrMatch(index, "high", event.target.value === "" ? "" : Number(event.target.value))} placeholder="상한" />
+                        <input type="number" step="0.1" value={match.low ?? ""} onChange={(event) => updateOcrMatch(index, "low", event.target.value === "" ? "" : Number(event.target.value))} placeholder="??" />
+                        <input type="number" step="0.1" value={match.high ?? ""} onChange={(event) => updateOcrMatch(index, "high", event.target.value === "" ? "" : Number(event.target.value))} placeholder="??" />
                         <div className={`ocr-confidence status-${referenceStatus}`}>{Math.round((match.confidence || 0) * 100)}%</div>
                             </>
                           );
@@ -2756,24 +2938,26 @@ function App() {
                       </div>
                     ))}
                   </div>
-                  {ocrReferenceAlerts.length ? (
-                    <div className="guidance-stack">
-                      {ocrReferenceAlerts.map((alert) => (
-                        <div key={`ocr-alert-${alert.code}`} className={`guidance-card level-${alert.status === "high" ? "high" : "medium"}`}>
-                          <div>
-                            <strong>{alert.label}</strong>
-                            <span>{alert.code}</span>
-                          </div>
-                          <p>{alert.message}</p>
-                          <small>{alert.detail}</small>
+                      {ocrReferenceAlerts.length ? (
+                        <div className="guidance-stack">
+                          {ocrReferenceAlerts.map((alert) => (
+                            <div key={`ocr-alert-${alert.code}`} className={`guidance-card level-${alert.status === "high" ? "high" : "medium"}`}>
+                              <div>
+                                <strong>{alert.label}</strong>
+                                <span>{alert.code}</span>
+                              </div>
+                              <p>{alert.message}</p>
+                              <small>{alert.detail}</small>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      ) : null}
+                      {ocrResult.rawText ? <div className="ocr-raw-text">{ocrResult.rawText}</div> : null}
+                      <button type="button" className="primary-btn wide" onClick={handleApplyOcr}>검토값 반영하기</button>
                     </div>
-                  ) : null}
-                  {ocrResult.rawText ? <div className="ocr-raw-text">{ocrResult.rawText}</div> : null}
-                  <button type="button" className="primary-btn wide" onClick={handleApplyOcr}>寃?좉컪 諛섏쁺?섍린</button>
+                  )}
                 </div>
-              )}
+              </details>
             </article>
           </section>
         )}
@@ -2998,6 +3182,15 @@ function App() {
                 <button type="button" className="ghost-btn" onClick={handleExportPdf} disabled={reportActionBusy}>PDF</button>
                 <button type="button" className="ghost-btn" onClick={handleExportImage} disabled={reportActionBusy}>이미지</button>
               </div>
+              <label className="export-open-toggle-card">
+                <div>
+                  <strong>생성 후 바로 열기</strong>
+                  <small>PDF 또는 이미지를 만든 뒤 바로 열기/공유 창을 띄웁니다.</small>
+                </div>
+                <span className="export-open-toggle">
+                  <input type="checkbox" checked={autoOpenExport} onChange={(event) => setAutoOpenExport(event.target.checked)} />
+                </span>
+              </label>
               {reportActionMessage ? <div className="inline-note">{reportActionMessage}</div> : null}
               <div className="agent-prep-grid">
                 <div className="bullet-card">
@@ -3076,7 +3269,7 @@ function App() {
                   <small>{selectedDisease ? "질환 문맥 우선순위 적용" : "수치 기반 자동 우선순위"}</small>
                 </div>
                 <div className="scan-stat">
-                  <span>吏덈Ц ?꾨낫</span>
+                  <span>질문 후보</span>
                   <strong>{clinicianQuestions.length}개</strong>
                   <small>의료진 상담 질문 정리</small>
                 </div>
@@ -3328,7 +3521,7 @@ function App() {
                         <StatusPill status={status} />
                       </div>
                       <div className="metric-footer">
-                        <span>{formatMetricValue(metricValue)} {metric.unit}</span>
+                        <span className="metric-reading">{formatMetricValue(metricValue)} {metric.unit}</span>
                       </div>
                     </button>
                   );
@@ -3401,7 +3594,7 @@ function App() {
                       </div>
                       <div className="history-compare-table">
                         {historyCompareMetrics.map((item) => (
-                          <div key={`compare-${item.code}`} className="history-compare-row">
+                          <div key={`compare-${item.code}`} className={`history-compare-row ${item.delta === null ? "flat" : item.delta > 0 ? "rise" : item.delta < 0 ? "fall" : "flat"}`}>
                             <strong>{item.code}</strong>
                             <span>{formatMetricValue(item.leftValue)} {item.unit}</span>
                             <span>{formatMetricValue(item.rightValue)} {item.unit}</span>
@@ -3472,17 +3665,11 @@ function App() {
                 <div className="key-status-grid">
                   <div className="status-box">
                     <span>Gemini 키 저장 여부</span>
-                    <strong className={`status-indicator ${session.user?.settings?.hasGeminiKey ? "saved" : "missing"}`}>
-                      <span className="status-indicator-dot" aria-hidden="true" />
-                      {session.user?.settings?.hasGeminiKey ? "저장됨" : "없음"}
-                    </strong>
+                    <strong className={`status-indicator ${session.user?.settings?.hasGeminiKey ? "saved" : "missing"}`}>{session.user?.settings?.hasGeminiKey ? "저장됨" : "없음"}</strong>
                   </div>
                   <div className="status-box">
                     <span>ChatGPT 키 저장 여부</span>
-                    <strong className={`status-indicator ${session.user?.settings?.hasOpenaiKey ? "saved" : "missing"}`}>
-                      <span className="status-indicator-dot" aria-hidden="true" />
-                      {session.user?.settings?.hasOpenaiKey ? "저장됨" : "없음"}
-                    </strong>
+                    <strong className={`status-indicator ${session.user?.settings?.hasOpenaiKey ? "saved" : "missing"}`}>{session.user?.settings?.hasOpenaiKey ? "저장됨" : "없음"}</strong>
                   </div>
                 </div>
 
@@ -3627,3 +3814,4 @@ function App() {
 }
 
 export default App;
+

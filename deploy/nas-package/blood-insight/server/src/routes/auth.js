@@ -1,6 +1,14 @@
 ﻿import express from "express";
 import { requireAuth } from "../middleware/auth.js";
-import { createUser, loginUser, clearSession, toPublicUser, updateUserAiSettings } from "../services/userStore.js";
+import {
+  createUser,
+  loginUser,
+  clearSession,
+  findLoginIds,
+  resetUserPassword,
+  toPublicUser,
+  updateUserAiSettings
+} from "../services/userStore.js";
 
 export const authRoute = express.Router();
 
@@ -25,6 +33,30 @@ authRoute.post("/login", async (req, res) => {
     const message = error instanceof Error ? error.message : "Unable to login";
     const status = message.includes("Invalid") || message.includes("required") ? 401 : 500;
     res.status(status).json({ error: "login_failed", message });
+  }
+});
+
+authRoute.post("/find-id", async (req, res) => {
+  try {
+    const { name } = req.body || {};
+    const result = await findLoginIds({ name });
+    res.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to find account";
+    const status = 400;
+    res.status(status).json({ error: "find_id_failed", message });
+  }
+});
+
+authRoute.post("/reset-password", async (req, res) => {
+  try {
+    const { name, email, newPassword } = req.body || {};
+    const result = await resetUserPassword({ name, email, newPassword });
+    res.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to reset password";
+    const status = 400;
+    res.status(status).json({ error: "reset_password_failed", message });
   }
 });
 
