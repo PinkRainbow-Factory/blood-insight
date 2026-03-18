@@ -223,7 +223,6 @@ label { display: block; color: var(--muted); font-size: 14px; }
 .hero-drop-main {
   width: 90px;
   height: 116px;
-  border-radius: 58% 58% 70% 70% / 42% 42% 88% 88%;
   background:
     radial-gradient(circle at 38% 24%, rgba(255, 235, 228, 0.3), transparent 18%),
     linear-gradient(180deg, #ff8f7f 0%, #ef6d6a 58%, #d74e56 100%);
@@ -233,18 +232,14 @@ label { display: block; color: var(--muted); font-size: 14px; }
   display: grid;
   place-items: center;
   transform: rotate(-18deg);
-}
-.hero-drop-main::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: -12px;
-  width: 30px;
-  height: 30px;
-  border-radius: 70% 70% 0 70%;
-  background: linear-gradient(180deg, rgba(255, 150, 136, 0.92) 0%, rgba(239, 109, 106, 0.86) 100%);
-  transform: translateX(-50%) rotate(44deg);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 108 108'><path d='M54 14C43.1 28.8 25.8 43 25.8 63.8C25.8 82 40.6 95.4 58.8 95.4C77 95.4 91.8 82 91.8 63.8C91.8 43 74.6 28.8 63.6 14C61.6 11.2 56 11.2 54 14Z'/></svg>");
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 108 108'><path d='M54 14C43.1 28.8 25.8 43 25.8 63.8C25.8 82 40.6 95.4 58.8 95.4C77 95.4 91.8 82 91.8 63.8C91.8 43 74.6 28.8 63.6 14C61.6 11.2 56 11.2 54 14Z'/></svg>");
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
 }
 .hero-drop-soft {
   position: absolute;
@@ -328,7 +323,9 @@ label { display: block; color: var(--muted); font-size: 14px; }
   margin: 0;
   font-size: 14px;
   line-height: 1.7;
-  max-width: 34ch;
+  max-width: 31ch;
+  word-break: keep-all;
+  line-break: strict;
 }
 .auth-card {
   background: var(--surface-strong);
@@ -2707,11 +2704,6 @@ label { display: block; color: var(--muted); font-size: 14px; }
   .hero-drop-main {
     width: 74px;
     height: 96px;
-  }
-  .hero-drop-main::after {
-    width: 24px;
-    height: 24px;
-    top: -10px;
   }
   .hero-drop-core {
     width: 36px;
