@@ -12,7 +12,14 @@ const STORAGE_KEYS = {
   profile: "bloodInsight.profile",
   labs: "bloodInsight.labs",
   customLabs: "bloodInsight.customLabs",
-  autoOpenExport: "bloodInsight.autoOpenExport"
+  autoOpenExport: "bloodInsight.autoOpenExport",
+  draftSavedAt: "bloodInsight.draftSavedAt"
+};
+
+const APP_RUNTIME_INFO = {
+  version: "1.1.0",
+  build: "2",
+  channel: "debug"
 };
 
 const NAV_ITEMS = [
@@ -60,6 +67,42 @@ function mapRecoveryErrorMessage(message, mode) {
   return mode === "find_id"
     ? "??? ??? ???? ?????."
     : "???? ???? ???? ?????.";
+}
+
+function humanizeAppError(message, fallback) {
+  const text = String(message || "");
+
+  if (!text) {
+    return fallback;
+  }
+
+  if (text.includes("시간이 초과")) {
+    return "응답 시간이 길어지고 있습니다. 네트워크 또는 AI 응답 상태를 확인한 뒤 다시 시도해 주세요.";
+  }
+
+  if (text.includes("Failed to fetch") || text.includes("NetworkError") || text.includes("Load failed")) {
+    return "서버와 연결하지 못했습니다. NAS 주소와 네트워크 연결 상태를 확인해 주세요.";
+  }
+
+  return text;
+}
+
+function formatSavedAt(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleString("ko-KR", {
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
 }
 
 function loadStoredProfile() {
@@ -355,6 +398,13 @@ function App() {
   const [historyCompareIds, setHistoryCompareIds] = useState([]);
   const [toast, setToast] = useState(null);
   const [autoOpenExport, setAutoOpenExport] = useState(() => localStorage.getItem(STORAGE_KEYS.autoOpenExport) === "true");
+  const [draftSavedAt, setDraftSavedAt] = useState(() => localStorage.getItem(STORAGE_KEYS.draftSavedAt) || "");
+  const [draftRestored] = useState(() => Boolean(
+    localStorage.getItem(STORAGE_KEYS.profile) ||
+    localStorage.getItem(STORAGE_KEYS.labs) ||
+    localStorage.getItem(STORAGE_KEYS.customLabs)
+  ));
+  const [lastAnalysisRequest, setLastAnalysisRequest] = useState(null);
 
   const selectedDisease = useMemo(
     () => diseaseCatalog.find((disease) => disease.code === profile.diseaseCode) || null,
@@ -503,6 +553,12 @@ function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.customLabs, JSON.stringify(customLabs));
   }, [customLabs]);
+
+  useEffect(() => {
+    const nextSavedAt = new Date().toISOString();
+    localStorage.setItem(STORAGE_KEYS.draftSavedAt, nextSavedAt);
+    setDraftSavedAt(nextSavedAt);
+  }, [profile, labs, customLabs]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.autoOpenExport, autoOpenExport ? "true" : "false");
@@ -923,7 +979,7 @@ function App() {
       }));
       setSettingsMessage("AI 설정을 저장했습니다. 이제 저장한 키로만 분석이 동작합니다.");
     } catch (error) {
-      setSettingsMessage(error.message || "설정 저장에 실패했습니다.");
+      setSettingsMessage(humanizeAppError(error.message, "설정 저장에 실패했습니다."));
     } finally {
       setSettingsBusy(false);
     }
@@ -968,6 +1024,17 @@ function App() {
       );
       const cleanLabs = { ...baseLabs, ...extraLabs };
 
+      if (!Object.keys(cleanLabs).length) {
+        throw new Error("먼저 최소 한 개 이상의 혈액검사 수치를 입력해 주세요.");
+      }
+
+      setLastAnalysisRequest({
+        provider: settingsDraft.provider,
+        metricCount: Object.keys(cleanLabs).length,
+        diseaseName: selectedDisease?.name || "",
+        requestedAt: new Date().toISOString()
+      });
+
       const result = await requestMedicalAnalysis({
         provider: settingsDraft.provider,
         profile,
@@ -996,11 +1063,16 @@ function App() {
         flashToast(historyError?.message || "기록 저장 또는 기록 불러오기에 실패했습니다.", "error");
       }
     } catch (error) {
-      setAnalysisError(error.message || "리포트 생성에 실패했습니다.");
+      setAnalysisError(humanizeAppError(error.message, "리포트 생성에 실패했습니다."));
       setActiveView("report");
     } finally {
       setAnalysisLoading(false);
     }
+  }
+
+  function handleRetryReport() {
+    setAnalysisError("");
+    handleGenerateReport();
   }
 
   async function handleRunOcr() {
@@ -2291,6 +2363,11 @@ function App() {
               <p>
               혈액 수치, 증상, 질환, 복약 일정을 함께 읽어주는 개인 맞춤형 건강 브리핑 대시보드입니다.
               </p>
+              {draftRestored && (
+                <div className="inline-note draft-restore-note">
+                  최근 입력 초안을 자동 복원했습니다{draftSavedAt ? ` · 마지막 저장 ${formatSavedAt(draftSavedAt)}` : ""}.
+                </div>
+              )}
               <div className="agent-signal-grid">
                 {agentSignals.map((signal) => (
                   <div key={signal.code} className={`signal-card signal-${signal.status}`}>
@@ -3172,6 +3249,12 @@ function App() {
               <h3>AI 에이전트 종합 브리핑</h3>
               <p>{analysisLoading ? "수치를 기반으로 AI 리포트를 생성하고 있습니다..." : summaryText}</p>
               {analysisError && <div className="inline-error">{analysisError}</div>}
+              {analysisError && (
+                <div className="report-error-actions">
+                  <button type="button" className="primary-btn small" onClick={handleRetryReport} disabled={analysisLoading}>다시 시도</button>
+                  <button type="button" className="ghost-btn small" onClick={() => setActiveView("settings")}>AI 설정 확인</button>
+                </div>
+              )}
               <div className="bullet-card report-lead-card">
                 이번 브리핑은 입력된 수치, 개인 프로필, 질환 문맥을 함께 읽는 구조입니다. 실제 임상 판단은 증상, 치료 일정, 최근 감염과 입원 여부까지 함께 최종 확인해야 합니다.
               </div>
@@ -3699,6 +3782,18 @@ function App() {
               <div className="bullet-card">Gemini와 ChatGPT 모델명도 여기서 직접 바꿀 수 있어, 사용하는 AI 에이전트의 맥락을 명시적으로 고를 수 있습니다.</div>
               <div className="bullet-card">하나의 모델을 바꾸면 이후 브리핑은 모두 해당 설정 기준으로 생성됩니다.</div>
               <div className="bullet-card">정식 배포 전 개인 테스트에 맞춘 구조이므로, 빠른 반복과 맞춤 설정에 유리합니다.</div>
+            </article>
+
+            <article className="glass-card info-card">
+              <h3>앱 상태 및 릴리즈 준비</h3>
+              <div className="bullet-card">현재 앱 버전은 {APP_RUNTIME_INFO.version} · build {APP_RUNTIME_INFO.build} · {APP_RUNTIME_INFO.channel} 채널입니다.</div>
+              <div className="bullet-card">프로필, 혈액 수치, 커스텀 항목은 자동 저장되며 앱을 다시 열면 최근 입력 초안을 자동 복원합니다.</div>
+              <div className="bullet-card">최근 초안 저장 시각: {draftSavedAt ? formatSavedAt(draftSavedAt) : "아직 저장 기록 없음"}</div>
+              <div className="bullet-card">
+                최근 AI 요청 상태: {lastAnalysisRequest
+                  ? `${lastAnalysisRequest.provider === "gemini" ? "Gemini" : "ChatGPT"} · ${lastAnalysisRequest.metricCount}개 수치${lastAnalysisRequest.diseaseName ? ` · ${lastAnalysisRequest.diseaseName}` : ""} · ${formatSavedAt(lastAnalysisRequest.requestedAt)}`
+                  : "아직 AI 리포트 생성 이력이 없습니다."}
+              </div>
             </article>
           </section>
         )}

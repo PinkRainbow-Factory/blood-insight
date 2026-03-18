@@ -376,6 +376,10 @@ label { display: block; color: var(--muted); font-size: 14px; }
 }
 .inline-error { color: #a13131; background: rgba(214, 91, 91, 0.12); }
 .inline-note { color: #0e6d62; background: rgba(14, 154, 138, 0.12); }
+.draft-restore-note {
+  margin-top: 4px;
+  line-height: 1.6;
+}
 .empty-card { color: var(--muted); }
 
 .app-shell {
@@ -1238,6 +1242,12 @@ label { display: block; color: var(--muted); font-size: 14px; }
 }
 .status-indicator.saved { color: #13795b; }
 .status-indicator.missing { color: #9b1c31; }
+.report-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
 .custom-lab-panel {
   margin-top: 18px;
   padding: 20px;
