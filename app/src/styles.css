@@ -217,8 +217,8 @@ label { display: block; color: var(--muted); font-size: 14px; }
 }
 .hero-drop {
   position: relative;
-  border-radius: 999px 999px 999px 999px / 72% 72% 100% 100%;
-  transform: rotate(18deg);
+  border-radius: 0;
+  transform: none;
 }
 .hero-drop-main {
   width: 126px;
@@ -226,7 +226,7 @@ label { display: block; color: var(--muted); font-size: 14px; }
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: rotate(-18deg);
+  transform: none;
 }
 .hero-drop-image {
   width: 100%;

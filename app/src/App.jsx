@@ -5,7 +5,6 @@ import { loadMedicalReportHistory, persistMedicalReport, requestMedicalAnalysis 
 import { cancelLabReminder, cancelMedicationReminder, registerNotificationActionListener, scheduleLabReminder, scheduleMedicationReminder } from "./services/notificationService";
 import { extractLabMetricsFromImage, getSampleOcrPayload, ocrInstitutionPresets, ocrTemplates } from "./services/ocrService";
 import { exportReportImage, exportReportPdf, openExportedFile, shareReport } from "./services/reportExportService";
-import authHeroBloodDrop from "./assets/auth-hero-blood-drop.svg";
 
 const STORAGE_KEYS = {
   token: "bloodInsight.authToken",
@@ -2062,7 +2061,7 @@ function App() {
         <div className="auth-hero">
           <div className="auth-hero-art" aria-hidden="true">
             <div className="hero-drop hero-drop-main">
-              <img src={authHeroBloodDrop} alt="" className="hero-drop-image" />
+              <img src="/auth-hero-blood-drop.svg" alt="" className="hero-drop-image" />
             </div>
             <div className="hero-drop hero-drop-soft hero-drop-left" />
             <div className="hero-drop hero-drop-soft hero-drop-right" />
