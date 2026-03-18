@@ -1,0 +1,27 @@
+﻿services:
+  server:
+    build:
+      context: ./server
+    container_name: blood-insight-server
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      ALLOWED_ORIGIN: http://localhost:4173
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+    volumes:
+      - ./server/data:/app/data
+    ports:
+      - "18082:8080"
+
+  web:
+    build:
+      context: ./app
+    container_name: blood-insight-web
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "4173:80"

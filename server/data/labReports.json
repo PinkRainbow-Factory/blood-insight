@@ -1,0 +1,540 @@
+{
+  "reports": [
+    {
+      "id": "report_1773561086829",
+      "createdAt": "2026-03-15T07:51:26.829Z",
+      "profile": {
+        "name": "김민서",
+        "age": "41",
+        "sex": "female",
+        "purpose": "followup",
+        "notes": "최근 피로감이 있고, 항암 치료 후 추적검사를 받고 있습니다."
+      },
+      "disease": {
+        "code": "C92.0",
+        "name": "급성 골수성 백혈병",
+        "group": "혈액암",
+        "focus": [
+          "WBC",
+          "HGB",
+          "PLT",
+          "CRP"
+        ],
+        "note": "혈액세포 생산과 염증 반응 관련 수치를 우선적으로 살펴봐야 합니다."
+      },
+      "labs": {
+        "WBC": 13.8,
+        "HGB": 9.8,
+        "PLT": 118,
+        "CRP": 16.2,
+        "AST": 42,
+        "ALT": 58,
+        "CREAT": 1.1,
+        "GLU": 114
+      },
+      "provider": "chatgpt",
+      "analysis": {
+        "provider": "openai",
+        "structured": {
+          "profile": {
+            "name": "김민서",
+            "age": "41",
+            "sex": "female",
+            "purpose": "followup",
+            "notes": "최근 피로감이 있고, 항암 치료 후 추적검사를 받고 있습니다."
+          },
+          "disease": {
+            "code": "C92.0",
+            "name": "급성 골수성 백혈병",
+            "group": "혈액암",
+            "focus": [
+              "WBC",
+              "HGB",
+              "PLT",
+              "CRP"
+            ],
+            "note": "혈액세포 생산과 염증 반응 관련 수치를 우선적으로 살펴봐야 합니다."
+          },
+          "metrics": [
+            {
+              "code": "WBC",
+              "name": "백혈구",
+              "value": 13.8,
+              "unit": "x10^3/uL",
+              "low": 4,
+              "high": 10,
+              "status": "high",
+              "label": "높음",
+              "severity": 98,
+              "related": true,
+              "meaning": "감염과 염증, 면역 상태를 볼 때 자주 확인합니다.",
+              "relevanceScore": 100
+            },
+            {
+              "code": "HGB",
+              "name": "혈색소",
+              "value": 9.8,
+              "unit": "g/dL",
+              "low": 12,
+              "high": 16,
+              "status": "low",
+              "label": "낮음",
+              "severity": 88,
+              "related": true,
+              "meaning": "빈혈과 산소 운반 상태 해석에 중요합니다.",
+              "relevanceScore": 100
+            },
+            {
+              "code": "PLT",
+              "name": "혈소판",
+              "value": 118,
+              "unit": "x10^3/uL",
+              "low": 150,
+              "high": 400,
+              "status": "low",
+              "label": "낮음",
+              "severity": 37,
+              "related": true,
+              "meaning": "출혈과 응고 균형 확인에 중요합니다.",
+              "relevanceScore": 57
+            },
+            {
+              "code": "CRP",
+              "name": "CRP",
+              "value": 16.2,
+              "unit": "mg/L",
+              "low": 0,
+              "high": 5,
+              "status": "high",
+              "label": "높음",
+              "severity": 100,
+              "related": true,
+              "meaning": "전신 염증 반응을 볼 때 참고합니다.",
+              "relevanceScore": 100
+            },
+            {
+              "code": "AST",
+              "name": "AST",
+              "value": 42,
+              "unit": "U/L",
+              "low": 10,
+              "high": 40,
+              "status": "borderline",
+              "label": "경계 높음",
+              "severity": 30,
+              "related": false,
+              "meaning": "간과 근육 등 조직 손상 가능성을 볼 때 참고합니다.",
+              "relevanceScore": 30
+            },
+            {
+              "code": "ALT",
+              "name": "ALT",
+              "value": 58,
+              "unit": "U/L",
+              "low": 7,
+              "high": 56,
+              "status": "borderline",
+              "label": "경계 높음",
+              "severity": 27,
+              "related": false,
+              "meaning": "간 기능과 관련해 자주 보는 수치입니다.",
+              "relevanceScore": 27
+            },
+            {
+              "code": "CREAT",
+              "name": "크레아티닌",
+              "value": 1.1,
+              "unit": "mg/dL",
+              "low": 0.5,
+              "high": 1.2,
+              "status": "normal",
+              "label": "정상",
+              "severity": 8,
+              "related": false,
+              "meaning": "신장 기능 평가에 자주 사용됩니다.",
+              "relevanceScore": 8
+            },
+            {
+              "code": "GLU",
+              "name": "포도당",
+              "value": 114,
+              "unit": "mg/dL",
+              "low": 70,
+              "high": 99,
+              "status": "high",
+              "label": "높음",
+              "severity": 84,
+              "related": false,
+              "meaning": "공복 혈당 상태를 빠르게 확인합니다.",
+              "relevanceScore": 84
+            }
+          ],
+          "priorityItems": [
+            {
+              "code": "WBC",
+              "name": "백혈구",
+              "value": 13.8,
+              "unit": "x10^3/uL",
+              "low": 4,
+              "high": 10,
+              "status": "high",
+              "label": "높음",
+              "severity": 98,
+              "related": true,
+              "meaning": "감염과 염증, 면역 상태를 볼 때 자주 확인합니다.",
+              "relevanceScore": 100
+            },
+            {
+              "code": "HGB",
+              "name": "혈색소",
+              "value": 9.8,
+              "unit": "g/dL",
+              "low": 12,
+              "high": 16,
+              "status": "low",
+              "label": "낮음",
+              "severity": 88,
+              "related": true,
+              "meaning": "빈혈과 산소 운반 상태 해석에 중요합니다.",
+              "relevanceScore": 100
+            },
+            {
+              "code": "CRP",
+              "name": "CRP",
+              "value": 16.2,
+              "unit": "mg/L",
+              "low": 0,
+              "high": 5,
+              "status": "high",
+              "label": "높음",
+              "severity": 100,
+              "related": true,
+              "meaning": "전신 염증 반응을 볼 때 참고합니다.",
+              "relevanceScore": 100
+            },
+            {
+              "code": "GLU",
+              "name": "포도당",
+              "value": 114,
+              "unit": "mg/dL",
+              "low": 70,
+              "high": 99,
+              "status": "high",
+              "label": "높음",
+              "severity": 84,
+              "related": false,
+              "meaning": "공복 혈당 상태를 빠르게 확인합니다.",
+              "relevanceScore": 84
+            }
+          ],
+          "riskScore": 96,
+          "summary": {
+            "abnormalCount": 7,
+            "focusMetricCodes": [
+              "WBC",
+              "HGB",
+              "CRP",
+              "GLU"
+            ],
+            "mode": "patient"
+          }
+        },
+        "aiResult": {
+          "overall_summary": "급성 골수성 백혈병 맥락에서 WBC, HGB, CRP 항목을 우선적으로 보는 것이 좋겠습니다.",
+          "priority_items": [
+            {
+              "test_code": "WBC",
+              "title": "백혈구 우선 확인",
+              "why_it_matters": "백혈구 수치가 높음 상태로 보여 현재 맥락에서 우선 확인이 필요합니다.",
+              "care_tip": "백혈구 변화와 관련된 증상, 복용약, 최근 치료 일정이나 컨디션을 함께 기록해 의료진과 상의해보세요.",
+              "ask_doctor": "백혈구 수치 변화가 현재 질환 또는 치료 경과와 어떤 관련이 있는지 설명해주실 수 있나요?"
+            },
+            {
+              "test_code": "HGB",
+              "title": "혈색소 우선 확인",
+              "why_it_matters": "혈색소 수치가 낮음 상태로 보여 현재 맥락에서 우선 확인이 필요합니다.",
+              "care_tip": "혈색소 변화와 관련된 증상, 복용약, 최근 치료 일정이나 컨디션을 함께 기록해 의료진과 상의해보세요.",
+              "ask_doctor": "혈색소 수치 변화가 현재 질환 또는 치료 경과와 어떤 관련이 있는지 설명해주실 수 있나요?"
+            },
+            {
+              "test_code": "CRP",
+              "title": "CRP 우선 확인",
+              "why_it_matters": "CRP 수치가 높음 상태로 보여 현재 맥락에서 우선 확인이 필요합니다.",
+              "care_tip": "CRP 변화와 관련된 증상, 복용약, 최근 치료 일정이나 컨디션을 함께 기록해 의료진과 상의해보세요.",
+              "ask_doctor": "CRP 수치 변화가 현재 질환 또는 치료 경과와 어떤 관련이 있는지 설명해주실 수 있나요?"
+            }
+          ],
+          "safety_notice": "이 결과는 의료 상담을 대체하지 않으며, 증상이나 치료 계획은 담당 의료진과 함께 판단해야 합니다."
+        }
+      }
+    },
+    {
+      "id": "report_1773560931363",
+      "createdAt": "2026-03-15T07:48:51.363Z",
+      "profile": {
+        "name": "김민서",
+        "age": "41",
+        "sex": "female",
+        "purpose": "followup",
+        "notes": "최근 피로감이 있고, 항암 치료 후 추적검사를 받고 있습니다."
+      },
+      "disease": {
+        "code": "C92.0",
+        "name": "급성 골수성 백혈병",
+        "group": "혈액암",
+        "focus": [
+          "WBC",
+          "HGB",
+          "PLT",
+          "CRP"
+        ],
+        "note": "혈액세포 생산과 염증 반응 관련 수치를 우선적으로 살펴봐야 합니다."
+      },
+      "labs": {
+        "WBC": 13.8,
+        "HGB": 9.8,
+        "PLT": 118,
+        "CRP": 16.2,
+        "AST": 42,
+        "ALT": 58,
+        "CREAT": 1.1,
+        "GLU": 114
+      },
+      "provider": "chatgpt",
+      "analysis": {
+        "provider": "openai",
+        "structured": {
+          "profile": {
+            "name": "김민서",
+            "age": "41",
+            "sex": "female",
+            "purpose": "followup",
+            "notes": "최근 피로감이 있고, 항암 치료 후 추적검사를 받고 있습니다."
+          },
+          "disease": {
+            "code": "C92.0",
+            "name": "급성 골수성 백혈병",
+            "group": "혈액암",
+            "focus": [
+              "WBC",
+              "HGB",
+              "PLT",
+              "CRP"
+            ],
+            "note": "혈액세포 생산과 염증 반응 관련 수치를 우선적으로 살펴봐야 합니다."
+          },
+          "metrics": [
+            {
+              "code": "WBC",
+              "name": "백혈구",
+              "value": 13.8,
+              "unit": "x10^3/uL",
+              "low": 4,
+              "high": 10,
+              "status": "high",
+              "label": "높음",
+              "severity": 98,
+              "related": true,
+              "meaning": "감염과 염증, 면역 상태를 볼 때 자주 확인합니다.",
+              "relevanceScore": 100
+            },
+            {
+              "code": "HGB",
+              "name": "혈색소",
+              "value": 9.8,
+              "unit": "g/dL",
+              "low": 12,
+              "high": 16,
+              "status": "low",
+              "label": "낮음",
+              "severity": 88,
+              "related": true,
+              "meaning": "빈혈과 산소 운반 상태 해석에 중요합니다.",
+              "relevanceScore": 100
+            },
+            {
+              "code": "PLT",
+              "name": "혈소판",
+              "value": 118,
+              "unit": "x10^3/uL",
+              "low": 150,
+              "high": 400,
+              "status": "low",
+              "label": "낮음",
+              "severity": 37,
+              "related": true,
+              "meaning": "출혈과 응고 균형 확인에 중요합니다.",
+              "relevanceScore": 57
+            },
+            {
+              "code": "CRP",
+              "name": "CRP",
+              "value": 16.2,
+              "unit": "mg/L",
+              "low": 0,
+              "high": 5,
+              "status": "high",
+              "label": "높음",
+              "severity": 100,
+              "related": true,
+              "meaning": "전신 염증 반응을 볼 때 참고합니다.",
+              "relevanceScore": 100
+            },
+            {
+              "code": "AST",
+              "name": "AST",
+              "value": 42,
+              "unit": "U/L",
+              "low": 10,
+              "high": 40,
+              "status": "borderline",
+              "label": "경계 높음",
+              "severity": 30,
+              "related": false,
+              "meaning": "간과 근육 등 조직 손상 가능성을 볼 때 참고합니다.",
+              "relevanceScore": 30
+            },
+            {
+              "code": "ALT",
+              "name": "ALT",
+              "value": 58,
+              "unit": "U/L",
+              "low": 7,
+              "high": 56,
+              "status": "borderline",
+              "label": "경계 높음",
+              "severity": 27,
+              "related": false,
+              "meaning": "간 기능과 관련해 자주 보는 수치입니다.",
+              "relevanceScore": 27
+            },
+            {
+              "code": "CREAT",
+              "name": "크레아티닌",
+              "value": 1.1,
+              "unit": "mg/dL",
+              "low": 0.5,
+              "high": 1.2,
+              "status": "normal",
+              "label": "정상",
+              "severity": 8,
+              "related": false,
+              "meaning": "신장 기능 평가에 자주 사용됩니다.",
+              "relevanceScore": 8
+            },
+            {
+              "code": "GLU",
+              "name": "포도당",
+              "value": 114,
+              "unit": "mg/dL",
+              "low": 70,
+              "high": 99,
+              "status": "high",
+              "label": "높음",
+              "severity": 84,
+              "related": false,
+              "meaning": "공복 혈당 상태를 빠르게 확인합니다.",
+              "relevanceScore": 84
+            }
+          ],
+          "priorityItems": [
+            {
+              "code": "WBC",
+              "name": "백혈구",
+              "value": 13.8,
+              "unit": "x10^3/uL",
+              "low": 4,
+              "high": 10,
+              "status": "high",
+              "label": "높음",
+              "severity": 98,
+              "related": true,
+              "meaning": "감염과 염증, 면역 상태를 볼 때 자주 확인합니다.",
+              "relevanceScore": 100
+            },
+            {
+              "code": "HGB",
+              "name": "혈색소",
+              "value": 9.8,
+              "unit": "g/dL",
+              "low": 12,
+              "high": 16,
+              "status": "low",
+              "label": "낮음",
+              "severity": 88,
+              "related": true,
+              "meaning": "빈혈과 산소 운반 상태 해석에 중요합니다.",
+              "relevanceScore": 100
+            },
+            {
+              "code": "CRP",
+              "name": "CRP",
+              "value": 16.2,
+              "unit": "mg/L",
+              "low": 0,
+              "high": 5,
+              "status": "high",
+              "label": "높음",
+              "severity": 100,
+              "related": true,
+              "meaning": "전신 염증 반응을 볼 때 참고합니다.",
+              "relevanceScore": 100
+            },
+            {
+              "code": "GLU",
+              "name": "포도당",
+              "value": 114,
+              "unit": "mg/dL",
+              "low": 70,
+              "high": 99,
+              "status": "high",
+              "label": "높음",
+              "severity": 84,
+              "related": false,
+              "meaning": "공복 혈당 상태를 빠르게 확인합니다.",
+              "relevanceScore": 84
+            }
+          ],
+          "riskScore": 96,
+          "summary": {
+            "abnormalCount": 7,
+            "focusMetricCodes": [
+              "WBC",
+              "HGB",
+              "CRP",
+              "GLU"
+            ],
+            "mode": "patient"
+          }
+        },
+        "aiResult": {
+          "overall_summary": "급성 골수성 백혈병 맥락에서 WBC, HGB, CRP 항목을 우선적으로 보는 것이 좋겠습니다.",
+          "priority_items": [
+            {
+              "test_code": "WBC",
+              "title": "백혈구 우선 확인",
+              "why_it_matters": "백혈구 수치가 높음 상태로 보여 현재 맥락에서 우선 확인이 필요합니다.",
+              "care_tip": "백혈구 변화와 관련된 증상, 복용약, 최근 치료 일정이나 컨디션을 함께 기록해 의료진과 상의해보세요.",
+              "ask_doctor": "백혈구 수치 변화가 현재 질환 또는 치료 경과와 어떤 관련이 있는지 설명해주실 수 있나요?"
+            },
+            {
+              "test_code": "HGB",
+              "title": "혈색소 우선 확인",
+              "why_it_matters": "혈색소 수치가 낮음 상태로 보여 현재 맥락에서 우선 확인이 필요합니다.",
+              "care_tip": "혈색소 변화와 관련된 증상, 복용약, 최근 치료 일정이나 컨디션을 함께 기록해 의료진과 상의해보세요.",
+              "ask_doctor": "혈색소 수치 변화가 현재 질환 또는 치료 경과와 어떤 관련이 있는지 설명해주실 수 있나요?"
+            },
+            {
+              "test_code": "CRP",
+              "title": "CRP 우선 확인",
+              "why_it_matters": "CRP 수치가 높음 상태로 보여 현재 맥락에서 우선 확인이 필요합니다.",
+              "care_tip": "CRP 변화와 관련된 증상, 복용약, 최근 치료 일정이나 컨디션을 함께 기록해 의료진과 상의해보세요.",
+              "ask_doctor": "CRP 수치 변화가 현재 질환 또는 치료 경과와 어떤 관련이 있는지 설명해주실 수 있나요?"
+            }
+          ],
+          "safety_notice": "이 결과는 의료 상담을 대체하지 않으며, 증상이나 치료 계획은 담당 의료진과 함께 판단해야 합니다."
+        }
+      }
+    }
+  ]
+}

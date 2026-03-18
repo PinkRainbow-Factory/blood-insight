@@ -1,0 +1,10 @@
+{
+  "appId": "ai.bloodinsight.app",
+  "appName": "Blood Insight AI",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true
+  }
+}
