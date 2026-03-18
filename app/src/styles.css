@@ -175,32 +175,32 @@ label { display: block; color: var(--muted); font-size: 14px; }
 .auth-hero::after {
   content: "";
   position: absolute;
-  right: -26px;
-  bottom: -34px;
-  width: 220px;
-  height: 220px;
+  right: -34px;
+  bottom: -42px;
+  width: 200px;
+  height: 200px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(239, 109, 106, 0.18), transparent 66%);
-  filter: blur(16px);
+  background: radial-gradient(circle, rgba(239, 109, 106, 0.12), transparent 68%);
+  filter: blur(18px);
   pointer-events: none;
 }
 .auth-hero::before {
   content: "";
   position: absolute;
-  left: 18px;
-  top: 12px;
-  width: 132px;
-  height: 172px;
-  border-radius: 92px 92px 110px 110px / 76px 76px 122px 122px;
+  left: -2px;
+  top: 8px;
+  width: 116px;
+  height: 148px;
+  border-radius: 80px 80px 94px 94px / 64px 64px 108px 108px;
   background:
-    radial-gradient(circle at 42% 28%, rgba(255, 226, 219, 0.36), transparent 18%),
-    linear-gradient(180deg, rgba(255, 145, 132, 0.62) 0%, rgba(239, 109, 106, 0.52) 56%, rgba(209, 66, 82, 0.46) 100%);
+    radial-gradient(circle at 40% 26%, rgba(255, 226, 219, 0.2), transparent 20%),
+    linear-gradient(180deg, rgba(255, 145, 132, 0.28) 0%, rgba(239, 109, 106, 0.24) 56%, rgba(209, 66, 82, 0.2) 100%);
   box-shadow:
-    0 18px 34px rgba(214, 70, 88, 0.18),
-    inset 0 1px 0 rgba(255,255,255,0.12);
+    0 14px 28px rgba(214, 70, 88, 0.14),
+    inset 0 1px 0 rgba(255,255,255,0.08);
   transform: rotate(-14deg);
-  opacity: 0.72;
-  filter: blur(1px);
+  opacity: 0.48;
+  filter: blur(4px);
   pointer-events: none;
 }
 .auth-hero-art {
@@ -2662,16 +2662,16 @@ label { display: block; color: var(--muted); font-size: 14px; }
     padding: 20px;
   }
   .auth-hero::before {
-    width: 96px;
-    height: 126px;
-    left: 14px;
-    top: 14px;
+    width: 88px;
+    height: 114px;
+    left: 8px;
+    top: 12px;
   }
   .auth-hero::after {
-    width: 176px;
-    height: 176px;
-    right: -38px;
-    bottom: -44px;
+    width: 152px;
+    height: 152px;
+    right: -34px;
+    bottom: -38px;
   }
   .auth-hero-art {
     align-items: flex-start;
