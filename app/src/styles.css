@@ -450,6 +450,30 @@ label { display: block; color: var(--muted); font-size: 14px; }
 .cta-row,
 .chip-row,
 .toggle-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.section-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.section-head.compact h4 {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+}
+.icon-help-btn {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(32, 38, 54, 0.08);
+  background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(255,245,240,0.88));
+  box-shadow: 0 10px 24px rgba(30, 36, 49, 0.06);
+  display: inline-grid;
+  place-items: center;
+  font-weight: 800;
+  color: #934044;
+}
 
 .screen-grid { display: grid; gap: 18px; }
 .screen-grid,
@@ -2451,9 +2475,13 @@ label { display: block; color: var(--muted); font-size: 14px; }
 }
 .symptom-picker-shell {
   display: grid;
+  grid-template-columns: auto 34px;
   gap: 8px;
   align-items: start;
   margin: 0;
+}
+.symptom-picker-shell > .icon-help-btn {
+  align-self: start;
 }
 .symptom-picker-panel {
   display: grid;
@@ -2497,11 +2525,20 @@ label { display: block; color: var(--muted); font-size: 14px; }
   gap: 10px;
 }
 .symptom-selected-row {
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: flex-start;
   width: 100%;
+}
+.disease-inline-summary {
+  display: grid;
+  gap: 6px;
+}
+.disease-inline-summary p,
+.disease-inline-summary small {
+  margin: 0;
 }
 .symptom-inline-note {
   width: 100%;
@@ -2668,6 +2705,9 @@ label { display: block; color: var(--muted); font-size: 14px; }
   .section-head {
     flex-direction: column;
     align-items: stretch;
+  }
+  .section-head-actions {
+    justify-content: flex-start;
   }
   .section-head .chip {
     max-width: 100%;

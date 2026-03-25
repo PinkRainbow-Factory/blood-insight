@@ -30,8 +30,47 @@ const NAV_ITEMS = [
   { id: "disease", label: "질환 해설" },
   { id: "report", label: "리포트" },
   { id: "history", label: "기록" },
-  { id: "settings", label: "AI 설정" }
+  { id: "settings", label: "설정" }
 ];
+
+const HELP_CONTENT = {
+  schedule: {
+    title: "검사 일정 도움말",
+    eyebrow: "SCHEDULE GUIDE",
+    blocks: [
+      "혈액검사 일정은 실제 재검일과 알림 전략을 함께 맞춰 두는 것이 좋습니다.",
+      "예정일이 바뀌면 바로 수정해 두면 외래 준비, 리포트 생성, 알림 흐름이 함께 최신 상태로 유지됩니다.",
+      "전날 + 당일 2회, 당일 1회, 주간 체크 중에서 지금 생활 패턴에 맞는 방식을 고르면 됩니다."
+    ]
+  },
+  labs: {
+    title: "수치 입력 도움말",
+    eyebrow: "INPUT GUIDE",
+    blocks: [
+      "혈액 수치는 CBC, 염증/면역, 간기능, 신장/전해질, 대사/내분비 흐름으로 나눠 입력할 수 있습니다.",
+      "검색으로 항목명이나 코드도 바로 찾을 수 있고, 최근 기록 불러오기와 OCR 결과 병합도 함께 지원합니다.",
+      "질환 포커스가 선택된 경우에는 해당 질환에서 우선 보는 수치를 먼저 검토하는 방식으로 정리됩니다."
+    ]
+  },
+  settings: {
+    title: "에이전트 동작 원리",
+    eyebrow: "AGENT LOGIC",
+    blocks: [
+      "로그인한 사용자는 서버 공용 키가 아니라 본인 계정에 저장한 API 키로만 분석을 진행합니다.",
+      "Gemini와 ChatGPT 모델명도 직접 바꿀 수 있어, 원하는 AI 공급자와 모델 기준으로 브리핑을 생성할 수 있습니다.",
+      "자동 로그인, API 키 저장, 모델 변경은 모두 이 설정 화면을 기준으로 함께 관리됩니다."
+    ]
+  },
+  disease: {
+    title: "질환 검색 및 선택",
+    eyebrow: "DISEASE CONTEXT",
+    blocks: [
+      "환자 모드에서는 질환명 또는 코드로 질환을 검색해 브리핑 맥락을 더 정교하게 맞출 수 있습니다.",
+      "질환을 선택하면 우선 볼 핵심 수치와 기본 브리핑 기준이 함께 바뀝니다.",
+      "일반 모드에서는 질환을 선택하지 않아도 혈액 수치와 증상 중심 브리핑은 계속 사용할 수 있습니다."
+    ]
+  }
+};
 
 function safeParse(rawValue, fallback) {
   try {
@@ -45,28 +84,28 @@ function mapRecoveryErrorMessage(message, mode) {
   const text = String(message || "");
 
   if (text.includes("Name is required")) {
-    return "??? ??? ???.";
+    return "이름을 먼저 입력해 주세요.";
   }
 
   if (text.includes("No account matches this name and email")) {
-    return "??? ??? ???? ???? ??? ?? ?????.";
+    return "입력한 이름과 이메일이 일치하는 계정을 찾지 못했습니다.";
   }
 
   if (text.includes("No account matches this name")) {
-    return "??? ???? ??? ??? ?? ?????.";
+    return "입력한 이름과 일치하는 계정을 찾지 못했습니다.";
   }
 
   if (text.includes("Name, email, and new password are required")) {
-    return "??, ???, ? ????? ?? ??? ???.";
+    return "이름, 이메일, 새 비밀번호를 모두 입력해 주세요.";
   }
 
   if (text.includes("Password must be at least 6 characters")) {
-    return "????? 6? ????? ???.";
+    return "비밀번호는 6자 이상이어야 합니다.";
   }
 
   return mode === "find_id"
-    ? "??? ??? ???? ?????."
-    : "???? ???? ???? ?????.";
+    ? "아이디 찾기 중 오류가 발생했습니다."
+    : "비밀번호 재설정 중 오류가 발생했습니다.";
 }
 
 function humanizeAppError(message, fallback) {
@@ -405,6 +444,8 @@ function App() {
     localStorage.getItem(STORAGE_KEYS.customLabs)
   ));
   const [lastAnalysisRequest, setLastAnalysisRequest] = useState(null);
+  const [helpModal, setHelpModal] = useState(null);
+  const [diseasePickerOpen, setDiseasePickerOpen] = useState(false);
 
   const selectedDisease = useMemo(
     () => diseaseCatalog.find((disease) => disease.code === profile.diseaseCode) || null,
@@ -977,7 +1018,7 @@ function App() {
         openaiModel: user.settings?.openaiModel || current.openaiModel || "gpt-5",
         geminiModel: user.settings?.geminiModel || current.geminiModel || "gemini-3-flash"
       }));
-      setSettingsMessage("AI 설정을 저장했습니다. 이제 저장한 키로만 분석이 동작합니다.");
+      setSettingsMessage("설정을 저장했습니다. 이제 저장한 키로만 분석이 동작합니다.");
     } catch (error) {
       setSettingsMessage(humanizeAppError(error.message, "설정 저장에 실패했습니다."));
     } finally {
@@ -997,7 +1038,7 @@ function App() {
 
     if (!providerKeyReady) {
       setActiveView("settings");
-      setAnalysisError("먼저 AI 설정에서 사용할 API 키를 저장해 주세요.");
+      setAnalysisError("먼저 설정에서 사용할 API 키를 저장해 주세요.");
       return;
     }
 
@@ -2347,7 +2388,7 @@ function App() {
           </div>
           <div className="topbar-status-row">
             <span className="chip accent">{settingsDraft.provider === "gemini" ? "Gemini" : "ChatGPT"}</span>
-                <span className={`chip ${readiness.apiKey ? "good" : "warn"}`}>{readiness.apiKey ? "AI 연결 완료" : "AI 설정 필요"}</span>
+                <span className={`chip ${readiness.apiKey ? "good" : "warn"}`}>{readiness.apiKey ? "AI 연결 완료" : "설정 필요"}</span>
             <button type="button" className="ghost-btn small topbar-logout-btn" onClick={handleLogout}>로그아웃</button>
           </div>
         </header>
@@ -2376,17 +2417,6 @@ function App() {
                     <small>{signal.name}</small>
                   </div>
                 ))}
-              </div>
-              <div className="dashboard-action-row">
-                <button className="primary-btn" type="button" onClick={handleGenerateReport} disabled={analysisLoading}>
-                  {analysisLoading ? "AI 리포트 생성 중..." : "AI 리포트 생성"}
-                </button>
-                <button className="ghost-btn" type="button" onClick={() => setActiveView("settings")}>AI 설정</button>
-                <button className="ghost-btn" type="button" onClick={() => setAutoLoginEnabled((current) => !current)}>
-                자동 로그인 {autoLoginEnabled ? "ON" : "OFF"}
-                </button>
-                <button className="ghost-btn" type="button" onClick={() => setActiveView("labs")}>수치 입력</button>
-                <button className="ghost-btn" type="button" onClick={() => setActiveView("schedule")}>일정 관리</button>
               </div>
             </article>
 
@@ -2427,7 +2457,7 @@ function App() {
         )}
 
         {activeView === "profile" && (
-          <section className="screen-grid two-column">
+          <section className="screen-grid">
             <article className="glass-card profile-card">
               <div className="section-head">
                 <h3>기본 프로필 정보</h3>
@@ -2551,6 +2581,14 @@ function App() {
                         ))}
                       </div>
                     </details>
+                    <button
+                      type="button"
+                      className="icon-help-btn"
+                      aria-label="질환 검색 및 선택 도움말"
+                      onClick={() => setDiseasePickerOpen(true)}
+                    >
+                      ?
+                    </button>
                     <div className="symptom-selected-row">
                       {(profile.symptomTags || []).length ? (
                         (profile.symptomTags || []).map((tag) => (
@@ -2561,6 +2599,22 @@ function App() {
                   </div>
                   <div className="inline-note symptom-inline-note">선택한 증상이 아직 없습니다. 필요한 항목만 골라 두면 문진 카드가 더 간결해집니다.</div>
                 </div>
+                {profile.mode === "patient" ? (
+                  <div className="selection-card disease-inline-summary">
+                    <div className="section-head compact">
+                      <h4>질환 선택 상태</h4>
+                      {selectedDisease ? <span className="chip accent">{selectedDisease.name}</span> : <span className="chip">미선택</span>}
+                    </div>
+                    {selectedDisease ? (
+                      <>
+                        <p>{selectedDisease.code} · {selectedDisease.group}</p>
+                        <small>우선 볼 핵심 수치: {selectedDisease.focus.join(", ")}</small>
+                      </>
+                    ) : (
+                      <small>도움말 버튼을 눌러 질환을 검색하고 브리핑 맥락을 선택해 보세요.</small>
+                    )}
+                  </div>
+                ) : null}
                 <div className="form-grid symptom-grid">
                   <label>
                     악화 요인
@@ -2581,45 +2635,6 @@ function App() {
                 </div>
               </div>
             </article>
-
-            <article className="glass-card">
-              <div className="section-head">
-                <h3>질환 검색 및 선택</h3>
-                <span className="chip accent">질환 코드와 해설 기준</span>
-              </div>
-              {profile.mode === "patient" ? (
-                <>
-                  <label>
-                    질환명 또는 코드 검색
-                    <input value={profile.diseaseQuery} onChange={(event) => updateProfile("diseaseQuery", event.target.value)} placeholder="예: 백혈병, AML, 림프종, CKD, 간경변" />
-                  </label>
-                  <div className="search-results">
-                    {diseaseResults.map((item) => (
-                      <button key={item.code} type="button" className={`search-result ${profile.diseaseCode === item.code ? "active" : ""}`} onClick={() => updateProfile("diseaseCode", item.code)}>
-                        <strong>{item.name}</strong>
-                        <span>{item.code} · {item.group}</span>
-                        <small>{item.note}</small>
-                      </button>
-                    ))}
-                  </div>
-                  {selectedDisease && (
-                    <div className="selection-card">
-                      <p className="eyebrow">선택된 질환</p>
-                      <h4>{selectedDisease.name}</h4>
-                      <p>{selectedDisease.code} · {selectedDisease.group}</p>
-                      <small>우선 볼 핵심 수치: {selectedDisease.focus.join(", ")}</small>
-                    </div>
-                  )}
-                  <div className="selection-card">
-                    <p className="eyebrow">질환별 기본 브리핑</p>
-                    <p>{diseaseProtocol.summary}</p>
-                    <small>함께 관찰할 증상: {(diseaseProtocol.symptomWatch || []).join(", ")}</small>
-                  </div>
-                </>
-              ) : (
-                <div className="empty-card">일반 모드에서는 질환 선택 없이도 검사 수치와 증상 중심으로 브리핑할 수 있습니다. 필요하면 환자 모드로 전환해 질환 문맥을 추가하세요.</div>
-              )}
-            </article>
           </section>
         )}
 
@@ -2628,7 +2643,10 @@ function App() {
             <article className="glass-card schedule-card">
               <div className="section-head">
                 <h3>혈액검사 일정 관리</h3>
-                <span className="chip accent">예정일 / 알림 전략 / 재검 준비</span>
+                <div className="section-head-actions">
+                  <span className="chip accent">예정일 / 알림 전략 / 재검 준비</span>
+                  <button type="button" className="icon-help-btn" onClick={() => setHelpModal(HELP_CONTENT.schedule)}>?</button>
+                </div>
               </div>
               <div className="form-grid">
                 <label>
@@ -2648,7 +2666,6 @@ function App() {
                   </select>
                 </label>
               </div>
-              <div className="bullet-card">검사 일정은 실제 재검일과 알림 전략을 함께 맞춰 두는 것이 좋습니다. 일정이 바뀌면 바로 수정해 최신 상태를 유지하세요.</div>
               <div className="cta-row">
                 <button type="button" className="primary-btn" onClick={handleScheduleReminder} disabled={notificationBusy}>
                   {notificationBusy ? "혈액검사 알림을 예약하는 중..." : "혈액검사 알림 예약"}
@@ -2705,6 +2722,7 @@ function App() {
               <div className="section-head">
                 <h3>혈액 수치 입력</h3>
                 <div className="chip-row">
+                  <button type="button" className="icon-help-btn" onClick={() => setHelpModal(HELP_CONTENT.labs)}>?</button>
                   <button type="button" className="ghost-btn small" onClick={() => setLabs(sampleValues)}>샘플 값 채우기</button>
                   <button type="button" className="ghost-btn small" onClick={handleLoadLatestLabs} disabled={!latestHistoryLabs}>최근 기록 불러오기</button>
                   <button type="button" className="ghost-btn small" onClick={() => setActiveView("report")}>리포트 보기</button>
@@ -2734,15 +2752,6 @@ function App() {
                 </div>
                 <div className="input-support-grid">
                   <div className="input-support-card">
-                    <div className="input-support-chip-row">
-                      <span className="chip accent">입력 가이드</span>
-                      {selectedDisease ? <span className="chip">{selectedDisease.name} 포커스 반영</span> : <span className="chip">일반 브리핑</span>}
-                    </div>
-                    <strong>혈액검사 입력을 항목군 기준으로 정리했습니다.</strong>
-                    <p>CBC, 염증/면역, 간기능, 신장/전해질, 대사/내분비 흐름으로 나눠 필요한 수치를 빠르게 찾을 수 있게 했습니다.</p>
-                    <small>질환 포커스 항목과 최근 기록 불러오기까지 함께 지원합니다.</small>
-                  </div>
-                  <div className="input-support-card">
                     <span className="chip good">현재 표시 항목</span>
                     <strong>{filteredLabMetrics.length}개</strong>
                     <p>{activeLabSection === "focus" ? "선택한 질환에서 우선 보는 혈액검사만 추려서 보여주고 있습니다." : "선택한 항목군 기준으로 검사 입력 카드를 정리해 두었습니다."}</p>
@@ -2750,7 +2759,7 @@ function App() {
                   </div>
                   {ocrMergedCodes.length > 0 && (
                     <div className="input-support-card merged-support-card">
-                      <span className="chip accent">OCR 蹂묓빀 ?꾨즺</span>
+                      <span className="chip accent">OCR 병합 완료</span>
                       <strong>{ocrMergedCodes.length}개 항목</strong>
                       <p>방금 반영한 OCR 결과를 표형 입력 화면에서 바로 이어서 검토할 수 있게 맞췄습니다.</p>
                       <small>강조된 행을 먼저 확인하고 부족한 항목만 추가로 입력해 보세요.</small>
@@ -3252,7 +3261,7 @@ function App() {
               {analysisError && (
                 <div className="report-error-actions">
                   <button type="button" className="primary-btn small" onClick={handleRetryReport} disabled={analysisLoading}>다시 시도</button>
-                  <button type="button" className="ghost-btn small" onClick={() => setActiveView("settings")}>AI 설정 확인</button>
+                  <button type="button" className="ghost-btn small" onClick={() => setActiveView("settings")}>설정 확인</button>
                 </div>
               )}
               <div className="bullet-card report-lead-card">
@@ -3730,11 +3739,14 @@ function App() {
         )}
 
         {activeView === "settings" && (
-          <section className="screen-grid two-column">
+          <section className="screen-grid">
             <article className="glass-card">
               <div className="section-head">
-                <h3>AI 설정</h3>
-                <span className="chip accent">사용자별 API 연결</span>
+                <h3>설정</h3>
+                <div className="section-head-actions">
+                  <span className="chip accent">사용자별 API 연결</span>
+                  <button type="button" className="icon-help-btn" onClick={() => setHelpModal(HELP_CONTENT.settings)}>?</button>
+                </div>
               </div>
               <form className="settings-form" onSubmit={handleSaveSettings}>
                 <div className="toggle-row">
@@ -3770,30 +3782,15 @@ function App() {
                   </div>
                 </div>
 
+                <label className="check-row">
+                  <input type="checkbox" checked={autoLoginEnabled} onChange={(event) => setAutoLoginEnabled(event.target.checked)} />
+                  <span>자동 로그인 사용</span>
+                </label>
+
                 {settingsMessage && <div className="inline-note">{settingsMessage}</div>}
 
-                <button type="submit" className="primary-btn wide" disabled={settingsBusy}>{settingsBusy ? "저장 중..." : "AI 설정 저장"}</button>
+                <button type="submit" className="primary-btn wide" disabled={settingsBusy}>{settingsBusy ? "저장 중..." : "설정 저장"}</button>
               </form>
-            </article>
-
-            <article className="glass-card info-card">
-              <h3>에이전트 동작 원리</h3>
-              <div className="bullet-card">로그인한 사용자는 서버 공용 키가 아니라 본인 계정에 저장한 API 키로만 분석을 진행합니다.</div>
-              <div className="bullet-card">Gemini와 ChatGPT 모델명도 여기서 직접 바꿀 수 있어, 사용하는 AI 에이전트의 맥락을 명시적으로 고를 수 있습니다.</div>
-              <div className="bullet-card">하나의 모델을 바꾸면 이후 브리핑은 모두 해당 설정 기준으로 생성됩니다.</div>
-              <div className="bullet-card">정식 배포 전 개인 테스트에 맞춘 구조이므로, 빠른 반복과 맞춤 설정에 유리합니다.</div>
-            </article>
-
-            <article className="glass-card info-card">
-              <h3>앱 상태 및 릴리즈 준비</h3>
-              <div className="bullet-card">현재 앱 버전은 {APP_RUNTIME_INFO.version} · build {APP_RUNTIME_INFO.build} · {APP_RUNTIME_INFO.channel} 채널입니다.</div>
-              <div className="bullet-card">프로필, 혈액 수치, 커스텀 항목은 자동 저장되며 앱을 다시 열면 최근 입력 초안을 자동 복원합니다.</div>
-              <div className="bullet-card">최근 초안 저장 시각: {draftSavedAt ? formatSavedAt(draftSavedAt) : "아직 저장 기록 없음"}</div>
-              <div className="bullet-card">
-                최근 AI 요청 상태: {lastAnalysisRequest
-                  ? `${lastAnalysisRequest.provider === "gemini" ? "Gemini" : "ChatGPT"} · ${lastAnalysisRequest.metricCount}개 수치${lastAnalysisRequest.diseaseName ? ` · ${lastAnalysisRequest.diseaseName}` : ""} · ${formatSavedAt(lastAnalysisRequest.requestedAt)}`
-                  : "아직 AI 리포트 생성 이력이 없습니다."}
-              </div>
             </article>
           </section>
         )}
@@ -3851,6 +3848,77 @@ function App() {
             </div>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {helpModal && (
+        <div className="modal-shell" onClick={() => setHelpModal(null)}>
+          <div className="modal-card" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="close-btn" onClick={() => setHelpModal(null)}>닫기</button>
+            <p className="eyebrow">{helpModal.eyebrow}</p>
+            <h3>{helpModal.title}</h3>
+            <div className="modal-stack">
+              {helpModal.blocks.map((block, index) => (
+                <div key={`${helpModal.title}-${index}`} className="modal-block">
+                  <p>{block}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {diseasePickerOpen && (
+        <div className="modal-shell" onClick={() => setDiseasePickerOpen(false)}>
+          <div className="modal-card" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="close-btn" onClick={() => setDiseasePickerOpen(false)}>닫기</button>
+            <p className="eyebrow">{HELP_CONTENT.disease.eyebrow}</p>
+            <h3>{HELP_CONTENT.disease.title}</h3>
+            <div className="modal-stack">
+              {HELP_CONTENT.disease.blocks.map((block, index) => (
+                <div key={`disease-help-${index}`} className="modal-block">
+                  <p>{block}</p>
+                </div>
+              ))}
+              {profile.mode === "patient" ? (
+                <>
+                  <label>
+                    질환명 또는 코드 검색
+                    <input value={profile.diseaseQuery} onChange={(event) => updateProfile("diseaseQuery", event.target.value)} placeholder="예: 백혈병, AML, 림프종, CKD, 간경변" />
+                  </label>
+                  <div className="search-results">
+                    {diseaseResults.map((item) => (
+                      <button
+                        key={item.code}
+                        type="button"
+                        className={`search-result ${profile.diseaseCode === item.code ? "active" : ""}`}
+                        onClick={() => updateProfile("diseaseCode", item.code)}
+                      >
+                        <strong>{item.name}</strong>
+                        <span>{item.code} · {item.group}</span>
+                        <small>{item.note}</small>
+                      </button>
+                    ))}
+                  </div>
+                  {selectedDisease && (
+                    <div className="selection-card">
+                      <p className="eyebrow">선택된 질환</p>
+                      <h4>{selectedDisease.name}</h4>
+                      <p>{selectedDisease.code} · {selectedDisease.group}</p>
+                      <small>우선 볼 핵심 수치: {selectedDisease.focus.join(", ")}</small>
+                    </div>
+                  )}
+                  <div className="selection-card">
+                    <p className="eyebrow">질환별 기본 브리핑</p>
+                    <p>{diseaseProtocol.summary}</p>
+                    <small>함께 관찰할 증상: {(diseaseProtocol.symptomWatch || []).join(", ")}</small>
+                  </div>
+                </>
+              ) : (
+                <div className="empty-card">일반 모드에서는 질환 선택 없이도 검사 수치와 증상 중심 브리핑을 계속 사용할 수 있습니다. 필요하면 환자 모드로 전환해 질환 문맥을 추가해 주세요.</div>
+              )}
+            </div>
           </div>
         </div>
       )}
