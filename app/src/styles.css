@@ -450,6 +450,9 @@ label { display: block; color: var(--muted); font-size: 14px; }
 .cta-row,
 .chip-row,
 .toggle-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.schedule-card .cta-row {
+  margin-top: 14px;
+}
 .compact-cta-row {
   justify-content: flex-end;
 }
@@ -479,6 +482,18 @@ label { display: block; color: var(--muted); font-size: 14px; }
   place-items: center;
   font-weight: 800;
   color: #934044;
+}
+.chip-row {
+  align-items: center;
+}
+.chip-row > .icon-help-btn,
+.chip-row > .ghost-btn.small {
+  display: inline-grid;
+  place-items: center;
+  min-height: 38px;
+}
+.labs-custom-card .chip-row {
+  justify-content: flex-end;
 }
 
 .screen-grid { display: grid; gap: 18px; }
