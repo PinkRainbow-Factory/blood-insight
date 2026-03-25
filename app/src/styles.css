@@ -450,6 +450,9 @@ label { display: block; color: var(--muted); font-size: 14px; }
 .cta-row,
 .chip-row,
 .toggle-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.compact-cta-row {
+  justify-content: flex-end;
+}
 .section-head-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1279,6 +1282,12 @@ label { display: block; color: var(--muted); font-size: 14px; }
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.56);
 }
+.labs-screen .labs-ocr-card {
+  order: 2;
+}
+.labs-screen .labs-custom-card {
+  order: 3;
+}
 .collapsible-card {
   overflow: hidden;
 }
@@ -1833,6 +1842,15 @@ label { display: block; color: var(--muted); font-size: 14px; }
   gap: 8px;
   flex-wrap: wrap;
 }
+.disease-tabbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.disease-tabbar .section-tab-btn {
+  width: 100%;
+  justify-content: center;
+}
 .section-tab-btn {
   padding: 11px 14px;
   border-radius: 999px;
@@ -2264,6 +2282,12 @@ label { display: block; color: var(--muted); font-size: 14px; }
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .compact-cta-row {
+    justify-content: stretch;
+  }
+  .compact-cta-row > * {
+    flex: 1 1 auto;
+  }
 }
 
 @media (max-width: 560px) {
@@ -2275,6 +2299,9 @@ label { display: block; color: var(--muted); font-size: 14px; }
   .relation-map-grid,
   .section-tabbar {
     grid-template-columns: 1fr;
+  }
+  .disease-tabbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

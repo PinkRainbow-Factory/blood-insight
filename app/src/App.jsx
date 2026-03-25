@@ -731,6 +731,14 @@ function App() {
     setProfile((current) => ({ ...current, [field]: value }));
   }
 
+  function handleSaveProfileDraft() {
+    localStorage.setItem(STORAGE_KEYS.profile, JSON.stringify(profile));
+    const nextSavedAt = new Date().toISOString();
+    localStorage.setItem(STORAGE_KEYS.draftSavedAt, nextSavedAt);
+    setDraftSavedAt(nextSavedAt);
+    flashToast("프로필과 증상 문진 내용을 저장했습니다.", "success");
+  }
+
   function toggleSymptomTag(tag) {
     setProfile((current) => {
       const tags = Array.isArray(current.symptomTags) ? current.symptomTags : [];
@@ -2633,6 +2641,9 @@ function App() {
                   <strong>{symptomBrief?.headline || "증상 정보가 아직 충분하지 않습니다. 입력해 두면 AI 브리핑이 더 정확해집니다."}</strong>
                   <small>{symptomBrief?.nextAction || "증상 태그, 지속 기간, 악화 요인, 완화 요인을 함께 적어 두면 다음 외래용 질문과 브리핑이 더 정교해집니다."}</small>
                 </div>
+                <div className="cta-row compact-cta-row">
+                  <button type="button" className="primary-btn" onClick={handleSaveProfileDraft}>저장</button>
+                </div>
               </div>
             </article>
           </section>
@@ -2717,13 +2728,12 @@ function App() {
         )}
 
         {activeView === "labs" && (
-          <section className="screen-grid two-column">
-            <article className="glass-card">
+          <section className="screen-grid two-column labs-screen">
+            <article className="glass-card labs-custom-card">
               <div className="section-head">
                 <h3>혈액 수치 입력</h3>
                 <div className="chip-row">
                   <button type="button" className="icon-help-btn" onClick={() => setHelpModal(HELP_CONTENT.labs)}>?</button>
-                  <button type="button" className="ghost-btn small" onClick={() => setLabs(sampleValues)}>샘플 값 채우기</button>
                   <button type="button" className="ghost-btn small" onClick={handleLoadLatestLabs} disabled={!latestHistoryLabs}>최근 기록 불러오기</button>
                   <button type="button" className="ghost-btn small" onClick={() => setActiveView("report")}>리포트 보기</button>
                 </div>
@@ -2842,7 +2852,7 @@ function App() {
                           </div>
                           <div className="lab-table-code-stack">
                             <span className="lab-table-code">{metric.code}</span>
-                            {isOcrMerged && <span className="ocr-merge-badge">OCR 蹂묓빀</span>}
+                            {isOcrMerged && <span className="ocr-merge-badge">OCR 병합</span>}
                           </div>
                           <StatusPill status={status} />
                           <label className="lab-table-input" onClick={(event) => event.stopPropagation()}>
@@ -3029,8 +3039,8 @@ function App() {
                         <input value={match.code} onChange={(event) => updateOcrMatch(index, "code", event.target.value)} placeholder="코드" />
                         <input type="number" step="0.1" value={match.value} onChange={(event) => updateOcrMatch(index, "value", event.target.value)} placeholder="값" />
                         <input value={match.unit || ""} onChange={(event) => updateOcrMatch(index, "unit", event.target.value)} placeholder="단위" />
-                        <input type="number" step="0.1" value={match.low ?? ""} onChange={(event) => updateOcrMatch(index, "low", event.target.value === "" ? "" : Number(event.target.value))} placeholder="??" />
-                        <input type="number" step="0.1" value={match.high ?? ""} onChange={(event) => updateOcrMatch(index, "high", event.target.value === "" ? "" : Number(event.target.value))} placeholder="??" />
+                        <input type="number" step="0.1" value={match.low ?? ""} onChange={(event) => updateOcrMatch(index, "low", event.target.value === "" ? "" : Number(event.target.value))} placeholder="하한" />
+                        <input type="number" step="0.1" value={match.high ?? ""} onChange={(event) => updateOcrMatch(index, "high", event.target.value === "" ? "" : Number(event.target.value))} placeholder="상한" />
                         <div className={`ocr-confidence status-${referenceStatus}`}>{Math.round((match.confidence || 0) * 100)}%</div>
                             </>
                           );
@@ -3095,7 +3105,7 @@ function App() {
             </article>
 
             <article className="glass-card list-card agenda-card">
-              <div className="section-tabbar">
+              <div className="section-tabbar disease-tabbar">
                 <button type="button" className={`section-tab-btn ${activeDiseaseSection === "overview" ? "active" : ""}`} onClick={() => setActiveDiseaseSection("overview")}>핵심 해설</button>
                 <button type="button" className={`section-tab-btn ${activeDiseaseSection === "expert" ? "active" : ""}`} onClick={() => setActiveDiseaseSection("expert")}>전문의 시각</button>
                 <button type="button" className={`section-tab-btn ${activeDiseaseSection === "protocol" ? "active" : ""}`} onClick={() => setActiveDiseaseSection("protocol")}>프로토콜</button>
@@ -3740,7 +3750,7 @@ function App() {
 
         {activeView === "settings" && (
           <section className="screen-grid">
-            <article className="glass-card">
+            <article className="glass-card labs-ocr-card">
               <div className="section-head">
                 <h3>설정</h3>
                 <div className="section-head-actions">
