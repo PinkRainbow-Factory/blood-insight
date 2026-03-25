@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { defaultProfile, diseaseCatalog, diseaseExpertGuides, diseasePlaybooks, metricDefinitions, sampleValues } from "./data";
 import { fetchSession, findLoginId, loginUser, logoutUser, resetPassword, saveAiSettings, signupUser } from "./services/apiClient";
 import { loadMedicalReportHistory, persistMedicalReport, requestMedicalAnalysis } from "./services/medicalAnalysisService";
@@ -446,6 +446,7 @@ function App() {
   const [lastAnalysisRequest, setLastAnalysisRequest] = useState(null);
   const [helpModal, setHelpModal] = useState(null);
   const [diseasePickerOpen, setDiseasePickerOpen] = useState(false);
+  const contentAreaRef = useRef(null);
 
   const selectedDisease = useMemo(
     () => diseaseCatalog.find((disease) => disease.code === profile.diseaseCode) || null,
@@ -726,6 +727,13 @@ function App() {
       }
     };
   }, [history]);
+
+  useEffect(() => {
+    if (contentAreaRef.current?.scrollTo) {
+      contentAreaRef.current.scrollTo({ top: 0, behavior: "auto" });
+    }
+    window.scrollTo?.(0, 0);
+  }, [activeView]);
 
   function updateProfile(field, value) {
     setProfile((current) => ({ ...current, [field]: value }));
@@ -2387,7 +2395,7 @@ function App() {
         <button className="ghost-btn wide" type="button" onClick={handleLogout}>로그아웃</button>
       </aside>
 
-      <div className="content-area">
+      <div className="content-area" ref={contentAreaRef}>
         <header className="topbar glass-card topbar-compact">
           <div>
             <p className="eyebrow">BLOOD INSIGHT AGENT</p>
@@ -2641,7 +2649,7 @@ function App() {
                   <strong>{symptomBrief?.headline || "증상 정보가 아직 충분하지 않습니다. 입력해 두면 AI 브리핑이 더 정확해집니다."}</strong>
                   <small>{symptomBrief?.nextAction || "증상 태그, 지속 기간, 악화 요인, 완화 요인을 함께 적어 두면 다음 외래용 질문과 브리핑이 더 정교해집니다."}</small>
                 </div>
-                <div className="cta-row compact-cta-row">
+                <div className="cta-row compact-cta-row profile-save-row">
                   <button type="button" className="primary-btn" onClick={handleSaveProfileDraft}>저장</button>
                 </div>
               </div>
@@ -3080,7 +3088,27 @@ function App() {
                 <span className="chip">{selectedDisease ? selectedDisease.code : "질환 미선택"}</span>
                 {selectedDisease ? <span className="chip report-risk-chip risk-medium">의료 자문형 브리핑</span> : null}
               </div>
-              <h3>질환별 전용 해설</h3>
+              <div className="section-head compact hero-head-with-help">
+                <h3>질환별 전용 해설</h3>
+                <button
+                  type="button"
+                  className="icon-help-btn"
+                  onClick={() => setHelpModal({
+                    title: "질환 포커스 및 수치 관계 해설",
+                    eyebrow: "DISEASE FOCUS",
+                    blocks: selectedDisease
+                      ? diseaseInsights.flatMap((item) => [
+                          `${item.name} (${item.code}) · 현재 ${item.value} ${item.unit}`,
+                          item.meaning,
+                          item.directionText,
+                          item.askDoctor
+                        ])
+                      : ["프로필에서 환자 모드와 질환 코드를 먼저 선택하면 질환 포커스 항목과 수치 관계 해설을 볼 수 있습니다."]
+                  })}
+                >
+                  ?
+                </button>
+              </div>
               <p>
                 {selectedDisease
                   ? `${selectedDisease.name} 맥락에서 중요하게 보는 혈액 항목과 현재 수치의 관계를 질환 중심으로 정리했습니다. 실제 임상에서는 증상, 치료 주기, 복약, 최근 감염과 입원 이력까지 함께 보는 방식으로 해석합니다.`
@@ -3112,39 +3140,6 @@ function App() {
                 <button type="button" className={`section-tab-btn ${activeDiseaseSection === "care" ? "active" : ""}`} onClick={() => setActiveDiseaseSection("care")}>경과/안전</button>
               </div>
             </article>
-
-            {activeDiseaseSection === "overview" && <article className="glass-card list-card">
-              <h3>질환 포커스 항목</h3>
-              {selectedDisease ? (
-                <div className="disease-focus-grid">
-                  {diseaseInsights.map((item) => (
-                    <div key={item.code} className={`disease-focus-card focus-${item.status}`}>
-                      <div className="disease-focus-head">
-                        <div>
-                          <strong>{item.code}</strong>
-                          <span>{item.name}</span>
-                        </div>
-                        <StatusPill status={item.status} />
-                      </div>
-                      <div className="disease-focus-value">{item.value} {item.unit}</div>
-                      <p>{item.summary}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : <div className="empty-card">프로필에서 환자 모드와 질환 코드를 먼저 선택해 주세요.</div>}
-            </article>}
-
-            {activeDiseaseSection === "overview" && <article className="glass-card list-card">
-              <h3>질환-수치 관계 해설</h3>
-              {selectedDisease ? diseaseInsights.map((item) => (
-                <div key={`${item.code}-explain`} className="disease-brief-card">
-                  <strong>{item.name} ({item.code})</strong>
-                  <p>{item.meaning}</p>
-                  <div className="bullet-card">{item.directionText}</div>
-                  <div className="bullet-card">{item.askDoctor}</div>
-                </div>
-              )) : <div className="empty-card">질환 해설은 환자 모드에서만 활성화됩니다.</div>}
-            </article>}
 
             {activeDiseaseSection === "overview" && <article className="glass-card list-card">
               <h3>임상 해설 포인트</h3>
@@ -3351,7 +3346,7 @@ function App() {
             </article>
 
             <article className="glass-card summary-card agenda-card">
-              <div className="section-tabbar">
+              <div className="section-tabbar disease-tabbar">
                 <button type="button" className={`section-tab-btn ${activeReportSection === "overview" ? "active" : ""}`} onClick={() => setActiveReportSection("overview")}>개요</button>
                 <button type="button" className={`section-tab-btn ${activeReportSection === "clinical" ? "active" : ""}`} onClick={() => setActiveReportSection("clinical")}>임상 해설</button>
                 <button type="button" className={`section-tab-btn ${activeReportSection === "trend" ? "active" : ""}`} onClick={() => setActiveReportSection("trend")}>추세</button>
@@ -4001,4 +3996,5 @@ function App() {
 }
 
 export default App;
+
 
