@@ -2190,7 +2190,7 @@ function App() {
         <div className="auth-hero">
           <div className="auth-hero-art" aria-hidden="true">
             <div className="hero-drop hero-drop-main">
-              <img src="/auth-hero-blood-drop.svg" alt="" className="hero-drop-image" />
+              <img src="/auth-hero-blood-drop.png" alt="" className="hero-drop-image" />
             </div>
             <div className="hero-drop hero-drop-soft hero-drop-left" />
             <div className="hero-drop hero-drop-soft hero-drop-right" />
@@ -2201,10 +2201,7 @@ function App() {
           </div>
           <div className="auth-hero-copy">
             <h1><span>Blood Insight</span><br /><span>혈액으로 알아보는 나의 건강</span></h1>
-            <p className="hero-copy-two-line">
-              <span>혈액검사 결과를 읽기 쉽게 정리하고, 질환과 증상 맥락까지</span>
-              <span>함께 해설해 주는 개인 건강 AI 에이전트입니다.</span>
-            </p>
+            <p className="hero-copy-two-line">혈액검사 결과를 읽기 쉽게 정리하고, 질환과 증상 맥락까지<br />함께 해설해 주는 개인 건강 AI 에이전트입니다.</p>
           </div>
           <div className="hero-checks">
             <span>회원 전용 기록 저장</span>

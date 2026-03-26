@@ -221,8 +221,8 @@ label { display: block; color: var(--muted); font-size: 14px; }
   transform: none;
 }
 .hero-drop-main {
-  width: 126px;
-  height: 152px;
+  width: 140px;
+  height: 140px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -245,14 +245,14 @@ label { display: block; color: var(--muted); font-size: 14px; }
 .hero-drop-left {
   width: 26px;
   height: 26px;
-  left: 108px;
-  top: 18px;
+  left: 116px;
+  top: 10px;
 }
 .hero-drop-right {
   width: 18px;
   height: 18px;
-  left: 144px;
-  top: 72px;
+  left: 146px;
+  top: 66px;
 }
 .hero-drop-core {
   display: none;
@@ -311,16 +311,16 @@ label { display: block; color: var(--muted); font-size: 14px; }
   line-break: strict;
 }
 .hero-copy-two-line {
-  display: grid;
-  gap: 2px;
-  width: 100%;
-  max-width: 100%;
+  display: block;
+  width: fit-content;
+  max-width: none;
   font-size: 13px;
   line-height: 1.72;
+  white-space: normal;
+  word-break: keep-all;
 }
-.hero-copy-two-line span {
+.hero-copy-two-line br {
   display: block;
-  white-space: nowrap;
 }
 .auth-card {
   background: var(--surface-strong);
@@ -2808,16 +2808,16 @@ label { display: block; color: var(--muted); font-size: 14px; }
     min-height: 94px;
   }
   .hero-drop-main {
-    width: 104px;
-    height: 128px;
+    width: 116px;
+    height: 116px;
   }
   .hero-drop-left {
-    left: 90px;
-    top: 14px;
+    left: 92px;
+    top: 10px;
   }
   .hero-drop-right {
-    left: 118px;
-    top: 58px;
+    left: 120px;
+    top: 56px;
   }
   .hero-info-card {
     max-width: 176px;
