@@ -221,8 +221,8 @@ label { display: block; color: var(--muted); font-size: 14px; }
   transform: none;
 }
 .hero-drop-main {
-  width: 140px;
-  height: 140px;
+  width: 132px;
+  height: 166px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -245,14 +245,14 @@ label { display: block; color: var(--muted); font-size: 14px; }
 .hero-drop-left {
   width: 26px;
   height: 26px;
-  left: 116px;
-  top: 10px;
+  left: 110px;
+  top: 16px;
 }
 .hero-drop-right {
   width: 18px;
   height: 18px;
-  left: 146px;
-  top: 66px;
+  left: 144px;
+  top: 84px;
 }
 .hero-drop-core {
   display: none;
@@ -2808,16 +2808,16 @@ label { display: block; color: var(--muted); font-size: 14px; }
     min-height: 94px;
   }
   .hero-drop-main {
-    width: 116px;
-    height: 116px;
+    width: 112px;
+    height: 142px;
   }
   .hero-drop-left {
     left: 92px;
-    top: 10px;
+    top: 16px;
   }
   .hero-drop-right {
-    left: 120px;
-    top: 56px;
+    left: 122px;
+    top: 72px;
   }
   .hero-info-card {
     max-width: 176px;

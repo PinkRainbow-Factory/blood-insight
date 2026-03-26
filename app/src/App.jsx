@@ -2190,7 +2190,7 @@ function App() {
         <div className="auth-hero">
           <div className="auth-hero-art" aria-hidden="true">
             <div className="hero-drop hero-drop-main">
-              <img src="/auth-hero-blood-drop.png" alt="" className="hero-drop-image" />
+              <img src="/auth-hero-blood-drop.svg" alt="" className="hero-drop-image" />
             </div>
             <div className="hero-drop hero-drop-soft hero-drop-left" />
             <div className="hero-drop hero-drop-soft hero-drop-right" />
