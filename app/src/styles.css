@@ -454,7 +454,7 @@ label { display: block; color: var(--muted); font-size: 14px; }
   margin-top: 14px;
 }
 .compact-cta-row {
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 .profile-save-row {
   margin-top: 12px;
@@ -493,7 +493,8 @@ label { display: block; color: var(--muted); font-size: 14px; }
   min-height: 38px;
 }
 .labs-custom-card .chip-row {
-  justify-content: flex-end;
+  justify-content: flex-start;
+  flex-wrap: wrap;
 }
 
 .screen-grid { display: grid; gap: 18px; }
@@ -804,7 +805,7 @@ label { display: block; color: var(--muted); font-size: 14px; }
 }
 .input-support-grid {
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 18px;
 }
@@ -2523,13 +2524,10 @@ label { display: block; color: var(--muted); font-size: 14px; }
 }
 .symptom-picker-shell {
   display: grid;
-  grid-template-columns: auto 34px;
+  grid-template-columns: 1fr;
   gap: 8px;
   align-items: start;
   margin: 0;
-}
-.symptom-picker-shell > .icon-help-btn {
-  align-self: start;
 }
 .symptom-picker-panel {
   display: grid;
@@ -2583,6 +2581,13 @@ label { display: block; color: var(--muted); font-size: 14px; }
 .disease-inline-summary {
   display: grid;
   gap: 6px;
+}
+.inline-disease-results {
+  max-height: 280px;
+  overflow: auto;
+}
+.snapshot-select-field select {
+  margin-top: 0;
 }
 .disease-inline-summary p,
 .disease-inline-summary small {
@@ -2730,6 +2735,9 @@ label { display: block; color: var(--muted); font-size: 14px; }
   display: block;
 }
 @media (max-width: 1180px) {
+  .input-support-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .symptom-checklist-grid,
   .timeline-multi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2759,6 +2767,9 @@ label { display: block; color: var(--muted); font-size: 14px; }
   }
   .section-head .chip {
     max-width: 100%;
+  }
+  .input-support-grid {
+    grid-template-columns: 1fr;
   }
   .symptom-checklist-grid,
   .timeline-multi-grid {

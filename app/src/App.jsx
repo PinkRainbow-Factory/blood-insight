@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   profile: "bloodInsight.profile",
   labs: "bloodInsight.labs",
   customLabs: "bloodInsight.customLabs",
+  labSnapshots: "bloodInsight.labSnapshots",
   autoOpenExport: "bloodInsight.autoOpenExport",
   draftSavedAt: "bloodInsight.draftSavedAt"
 };
@@ -154,6 +155,19 @@ function loadStoredLabs() {
 
 function loadStoredCustomLabs() {
   return safeParse(localStorage.getItem(STORAGE_KEYS.customLabs), []);
+}
+
+function loadStoredLabSnapshots() {
+  return safeParse(localStorage.getItem(STORAGE_KEYS.labSnapshots), []);
+}
+
+function formatTodayLabel(value = new Date()) {
+  return value.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short"
+  });
 }
 
 function normalizeText(value) {
@@ -408,6 +422,8 @@ function App() {
   const [profile, setProfile] = useState(loadStoredProfile);
   const [labs, setLabs] = useState(loadStoredLabs);
   const [customLabs, setCustomLabs] = useState(loadStoredCustomLabs);
+  const [labSnapshots, setLabSnapshots] = useState(loadStoredLabSnapshots);
+  const [selectedLabSnapshotId, setSelectedLabSnapshotId] = useState("");
   const [customLabDraft, setCustomLabDraft] = useState({ name: "", code: "", value: "", unit: "", low: "", high: "" });
   const [medicationScheduleDraft, setMedicationScheduleDraft] = useState(emptyMedicationDraft);
   const [medicationEditorOpen, setMedicationEditorOpen] = useState(false);
@@ -491,6 +507,7 @@ function App() {
     [profile.medications]
   );
   const preferredDisplayName = profile.displayName || session?.user?.name || "사용자";
+  const todayLabel = useMemo(() => formatTodayLabel(), []);
   const abnormalCount = useMemo(() => countAbnormal(labs), [labs]);
   const medicalSafetyNotes = useMemo(() => {
     const notes = [
@@ -557,6 +574,10 @@ function App() {
       return searchStack.includes(search);
     });
   }, [labSearchQuery, combinedMetrics, activeLabSection, selectedDisease, customLabs]);
+  const labSnapshotOptions = useMemo(
+    () => [...labSnapshots].sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()),
+    [labSnapshots]
+  );
 
   const diseaseResults = useMemo(() => {
     if (profile.mode !== "patient") {
@@ -595,6 +616,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.customLabs, JSON.stringify(customLabs));
   }, [customLabs]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.labSnapshots, JSON.stringify(labSnapshots));
+  }, [labSnapshots]);
 
   useEffect(() => {
     const nextSavedAt = new Date().toISOString();
@@ -737,6 +762,58 @@ function App() {
 
   function updateProfile(field, value) {
     setProfile((current) => ({ ...current, [field]: value }));
+  }
+
+  function saveCurrentLabSnapshot(source = "manual") {
+    const baseLabs = Object.fromEntries(
+      Object.entries(labs).filter(([, value]) => value !== "" && Number.isFinite(Number(value)))
+    );
+    const extraLabs = customLabs
+      .filter((item) => item.name && item.value !== "" && Number.isFinite(Number(item.value)))
+      .map((item) => ({
+        code: item.code,
+        name: item.name,
+        value: Number(item.value),
+        unit: item.unit || "",
+        low: item.low === "" ? "" : Number(item.low),
+        high: item.high === "" ? "" : Number(item.high)
+      }));
+
+    if (!Object.keys(baseLabs).length && !extraLabs.length) {
+      flashToast("먼저 저장할 혈액 수치를 입력해 주세요.", "error");
+      return null;
+    }
+
+    const savedAt = new Date().toISOString();
+    const snapshot = {
+      id: `${savedAt}-${Math.random().toString(36).slice(2, 7)}`,
+      savedAt,
+      source,
+      title: selectedDisease ? `${selectedDisease.name} 수치 저장` : "일반 혈액 수치 저장",
+      diseaseCode: profile.diseaseCode || "",
+      labs: baseLabs,
+      customLabs: extraLabs
+    };
+
+    setLabSnapshots((current) => [snapshot, ...current].slice(0, 24));
+    setSelectedLabSnapshotId(snapshot.id);
+    flashToast(`혈액 수치 ${Object.keys(baseLabs).length + extraLabs.length}개 항목을 저장했습니다.`, "success");
+    return snapshot;
+  }
+
+  function applySnapshot(snapshot) {
+    if (!snapshot) {
+      return;
+    }
+    setLabs((current) => ({ ...sampleValues, ...current, ...(snapshot.labs || {}) }));
+    setCustomLabs(snapshot.customLabs || []);
+    if (snapshot.diseaseCode) {
+      setProfile((current) => ({ ...current, mode: "patient", diseaseCode: snapshot.diseaseCode }));
+    }
+    setActiveLabSection("all");
+    setLabViewMode("table");
+    setLabSearchQuery("");
+    flashToast(`${formatSavedAt(snapshot.savedAt)} 저장 수치를 불러왔습니다.`, "success");
   }
 
   function handleSaveProfileDraft() {
@@ -1091,6 +1168,7 @@ function App() {
         diseaseName: selectedDisease?.name || "",
         requestedAt: new Date().toISOString()
       });
+      saveCurrentLabSnapshot("report");
 
       const result = await requestMedicalAnalysis({
         provider: settingsDraft.provider,
@@ -1139,7 +1217,52 @@ function App() {
       const payload = uploadedFile
         ? await extractLabMetricsFromImage(uploadedFile, profile.ocrTemplate || "general", profile.ocrInstitutionPreset || "generic")
         : getSampleOcrPayload(profile.ocrTemplate || "general", profile.ocrInstitutionPreset || "generic");
-      setOcrResult(normalizeOcrPayload(payload));
+      const normalizedPayload = normalizeOcrPayload(payload);
+      setOcrResult(normalizedPayload);
+      if (uploadedFile && normalizedPayload?.matches?.length) {
+        const enabledMatches = normalizedPayload.matches.filter((match) => match.enabled && match.code && match.label && match.value !== "" && Number.isFinite(Number(match.value)));
+        if (enabledMatches.length) {
+          setLabs((current) => {
+            const next = { ...current };
+            enabledMatches.forEach((match) => {
+              if (metricDefinitions.some((metric) => metric.code === match.code)) {
+                next[match.code] = Number(match.value);
+              }
+            });
+            return next;
+          });
+          setCustomLabs((current) => {
+            const next = [...current];
+            enabledMatches.forEach((match) => {
+              if (!metricDefinitions.some((metric) => metric.code === match.code)) {
+                const existingIndex = next.findIndex((item) => item.code === match.code);
+                const customItem = {
+                  code: match.code,
+                  name: match.label,
+                  value: Number(match.value),
+                  unit: match.unit || "",
+                  low: match.low === "" ? "" : Number(match.low),
+                  high: match.high === "" ? "" : Number(match.high)
+                };
+                if (existingIndex >= 0) {
+                  next[existingIndex] = { ...next[existingIndex], ...customItem };
+                } else {
+                  next.push(customItem);
+                }
+              }
+            });
+            return next;
+          });
+          const mergedCodes = enabledMatches.map((match) => match.code);
+          setOcrMergedCodes(mergedCodes);
+          setLabViewMode("table");
+          setActiveLabSection("all");
+          setLabSearchQuery("");
+          setSelectedMetricCode(mergedCodes[0] || "");
+          setActiveView("labs");
+          flashToast(`사진에서 ${mergedCodes.length}개 혈액 수치를 자동 반영했습니다.`, "success");
+        }
+      }
     } catch (error) {
       setAnalysisError(error.message || "OCR 분석에 실패했습니다.");
     } finally {
@@ -1261,6 +1384,15 @@ function App() {
     flashToast("최근 저장된 혈액검사 값을 불러왔습니다.", "success");
   }
 
+  function handleLoadSelectedSnapshot() {
+    const snapshot = labSnapshotOptions.find((item) => item.id === selectedLabSnapshotId);
+    if (!snapshot) {
+      flashToast("먼저 불러올 저장 일자를 선택해 주세요.", "error");
+      return;
+    }
+    applySnapshot(snapshot);
+  }
+
   function handleLoadReport(report) {
     if (report?.labs) {
       setLabs((current) => ({ ...current, ...report.labs }));
@@ -1292,6 +1424,92 @@ function App() {
     handleLoadReport(targetReport);
     return true;
   }
+
+  const metricNarratives = useMemo(() => {
+    const aiExplanations = Array.isArray(analysis?.aiResult?.metric_explanations)
+      ? analysis.aiResult.metric_explanations.filter(Boolean)
+      : [];
+    if (aiExplanations.length) {
+      return aiExplanations.slice(0, 8).map((item) => ({
+        title: item.title || `${item.code || "수치"} 상세 해설`,
+        body: [item.current, item.reference, item.interpretation, item.disease_context, item.action_hint]
+          .filter(Boolean)
+          .join(" ")
+      }));
+    }
+
+    const sourceMetrics = analysis?.structured?.metrics?.length
+      ? analysis.structured.metrics
+      : combinedMetrics
+        .map((metric) => ({
+          code: metric.code,
+          name: metric.name,
+          value: currentMetricMap[metric.code],
+          unit: metric.unit,
+          low: metric.range?.low,
+          high: metric.range?.high,
+          label: classifyMetric(metric, currentMetricMap[metric.code]) === "high"
+            ? "높음"
+            : classifyMetric(metric, currentMetricMap[metric.code]) === "low"
+              ? "낮음"
+              : classifyMetric(metric, currentMetricMap[metric.code]) === "normal"
+                ? "정상"
+                : "범위 없음",
+          meaning: metric.meaning,
+          related: selectedDisease?.focus?.includes(metric.code) ? [`${selectedDisease.name} 포커스`] : []
+        }))
+        .filter((metric) => metric.value !== "" && Number.isFinite(Number(metric.value)));
+
+    return sourceMetrics
+      .filter((metric) => metric.value !== "" && Number.isFinite(Number(metric.value)))
+      .sort((a, b) => {
+        const tone = (item) => (item.label === "높음" || item.label === "낮음" ? 2 : item.label === "범위 없음" ? 1 : 0);
+        return tone(b) - tone(a);
+      })
+      .slice(0, 8)
+      .map((metric) => {
+        const reference = Number.isFinite(metric.low) && Number.isFinite(metric.high)
+          ? `${metric.low} - ${metric.high} ${metric.unit || ""}`.trim()
+          : "참고범위 없음";
+        const currentValue = `${formatMetricValue(metric.value)} ${metric.unit || ""}`.trim();
+        const diseaseContext = selectedDisease
+          ? `${selectedDisease.name} 맥락에서는 ${selectedDisease.focus?.includes(metric.code) ? "우선 추적하는 핵심 수치" : "보조적으로 함께 확인하는 수치"}로 봅니다.`
+          : "일반 건강관리 모드에서는 현재 수치와 증상, 최근 변화 추세를 함께 읽는 편이 좋습니다.";
+        const interpretation = metric.label === "높음"
+          ? `${metric.name} 수치가 현재 참고범위보다 높게 보입니다.`
+          : metric.label === "낮음"
+            ? `${metric.name} 수치가 현재 참고범위보다 낮게 보입니다.`
+            : metric.label === "정상"
+              ? `${metric.name} 수치는 현재 입력한 참고범위 안에 있습니다.`
+              : `${metric.name} 수치는 참고범위 정보가 없어 절대 해석보다 맥락 중심으로 읽어야 합니다.`;
+
+        return {
+          title: `${metric.name} (${metric.code})`,
+          body: `${interpretation} 현재 값은 ${currentValue}, 참고범위는 ${reference}입니다. ${metric.meaning || ""} ${diseaseContext}`.trim()
+        };
+      });
+  }, [analysis, combinedMetrics, currentMetricMap, selectedDisease]);
+
+  const dashboardDiseaseBrief = useMemo(() => {
+    if (!selectedDisease) {
+      return {
+        title: "일반 건강관리 해설",
+        summary: analysis?.aiResult?.dashboard_commentary || "질환을 선택하지 않은 경우에도 최근 혈액 수치, 증상, 복약 일정, 추세를 함께 읽는 일반 해설을 제공합니다.",
+        note: "환자 모드에서 질환을 선택하면 메인 화면부터 질환 맥락 해설이 적용됩니다."
+      };
+    }
+
+    const focusMetrics = (analysis?.structured?.metrics || []).filter((metric) => selectedDisease.focus?.includes(metric.code)).slice(0, 3);
+    const focusSummary = focusMetrics.length
+      ? focusMetrics.map((metric) => `${metric.code} ${formatMetricValue(metric.value)}${metric.unit ? ` ${metric.unit}` : ""}`).join(" · ")
+      : `${selectedDisease.focus?.slice(0, 4).join(", ")} 중심으로 추적합니다.`;
+
+    return {
+      title: `${selectedDisease.name} 메인 해설`,
+      summary: analysis?.aiResult?.disease_commentary || `${selectedDisease.name}에서는 ${selectedDisease.note || "질환 경과와 치료 맥락에 따라 핵심 혈액 수치를 함께 읽는 방식"}이 중요합니다.`,
+      note: `오늘 우선 볼 수치: ${focusSummary}`
+    };
+  }, [selectedDisease, analysis]);
 
   async function handleScheduleReminder() {
     setNotificationBusy(true);
@@ -1392,7 +1610,8 @@ function App() {
         emergencyFlags: diseaseEmergencyFlags,
         retestPriorityCards,
         symptomBrief,
-        clinicianQuestions: enhancedClinicianQuestions
+        clinicianQuestions: enhancedClinicianQuestions,
+        metricNarratives
       });
       setReportActionMessage(result.message || "리포트를 공유했습니다.");
       flashToast(result.message || "리포트를 공유했습니다.", "success");
@@ -1427,7 +1646,8 @@ function App() {
         emergencyFlags: diseaseEmergencyFlags,
         retestPriorityCards,
         symptomBrief,
-        clinicianQuestions: enhancedClinicianQuestions
+        clinicianQuestions: enhancedClinicianQuestions,
+        metricNarratives
       });
       if (autoOpenExport && result?.uri) {
         await openExportedFile({
@@ -1469,7 +1689,8 @@ function App() {
         emergencyFlags: diseaseEmergencyFlags,
         retestPriorityCards,
         symptomBrief,
-        clinicianQuestions: enhancedClinicianQuestions
+        clinicianQuestions: enhancedClinicianQuestions,
+        metricNarratives
       });
       if (autoOpenExport && result?.uri) {
         await openExportedFile({
@@ -2397,7 +2618,7 @@ function App() {
           <div>
             <p className="eyebrow">BLOOD INSIGHT AGENT</p>
                 <h2>{activeView === "dashboard" ? "메인 대시보드" : NAV_ITEMS.find((item) => item.id === activeView)?.label}</h2>
-                <small>{preferredDisplayName}님 맞춤 브리핑</small>
+                <small>{preferredDisplayName}님 맞춤 브리핑 · {todayLabel}</small>
           </div>
           <div className="topbar-status-row">
             <span className="chip accent">{settingsDraft.provider === "gemini" ? "Gemini" : "ChatGPT"}</span>
@@ -2446,8 +2667,9 @@ function App() {
             </article>
 
             <article className="glass-card mini-card">
-              <h3>최근 브리핑 요약</h3>
-              <p>{history[0]?.analysis?.aiResult?.overall_summary || "최근 생성된 리포트가 아직 없습니다. 첫 리포트를 만들면 여기에 요약이 표시됩니다."}</p>
+              <h3>{dashboardDiseaseBrief.title}</h3>
+              <p>{dashboardDiseaseBrief.summary}</p>
+              <small>{dashboardDiseaseBrief.note}</small>
               {history[0] && <button type="button" className="ghost-btn" onClick={() => handleLoadReport(history[0])}>최근 리포트 바로 열기</button>}
             </article>
 
@@ -2594,14 +2816,6 @@ function App() {
                         ))}
                       </div>
                     </details>
-                    <button
-                      type="button"
-                      className="icon-help-btn"
-                      aria-label="질환 검색 및 선택 도움말"
-                      onClick={() => setDiseasePickerOpen(true)}
-                    >
-                      ?
-                    </button>
                     <div className="symptom-selected-row">
                       {(profile.symptomTags || []).length ? (
                         (profile.symptomTags || []).map((tag) => (
@@ -2615,16 +2829,31 @@ function App() {
                 {profile.mode === "patient" ? (
                   <div className="selection-card disease-inline-summary">
                     <div className="section-head compact">
-                      <h4>질환 선택 상태</h4>
+                      <h4>질환 선택</h4>
                       {selectedDisease ? <span className="chip accent">{selectedDisease.name}</span> : <span className="chip">미선택</span>}
                     </div>
+                    <label>
+                      질환명 또는 코드 검색
+                      <input value={profile.diseaseQuery} onChange={(event) => updateProfile("diseaseQuery", event.target.value)} placeholder="예: 백혈병, AML, 림프종, CKD, 간경변" />
+                    </label>
+                    <div className="search-results inline-disease-results">
+                      {diseaseResults.map((item) => (
+                        <button
+                          key={item.code}
+                          type="button"
+                          className={`search-result ${profile.diseaseCode === item.code ? "active" : ""}`}
+                          onClick={() => updateProfile("diseaseCode", item.code)}
+                        >
+                          <strong>{item.name}</strong>
+                          <span>{item.code} · {item.group}</span>
+                          <small>{item.note}</small>
+                        </button>
+                      ))}
+                    </div>
                     {selectedDisease ? (
-                      <>
-                        <p>{selectedDisease.code} · {selectedDisease.group}</p>
-                        <small>우선 볼 핵심 수치: {selectedDisease.focus.join(", ")}</small>
-                      </>
+                      <small>우선 볼 핵심 수치: {selectedDisease.focus.join(", ")}</small>
                     ) : (
-                      <small>도움말 버튼을 눌러 질환을 검색하고 브리핑 맥락을 선택해 보세요.</small>
+                      <small>환자 모드에서는 질환을 직접 선택하면 메인/리포트/질환 해설에 질환 맥락이 반영됩니다.</small>
                     )}
                   </div>
                 ) : null}
@@ -2739,6 +2968,7 @@ function App() {
                 <h3>혈액 수치 입력</h3>
                 <div className="chip-row">
                   <button type="button" className="icon-help-btn" onClick={() => setHelpModal(HELP_CONTENT.labs)}>?</button>
+                  <button type="button" className="ghost-btn small" onClick={() => saveCurrentLabSnapshot("manual")}>수치 저장</button>
                   <button type="button" className="ghost-btn small" onClick={handleLoadLatestLabs} disabled={!latestHistoryLabs}>최근 기록 불러오기</button>
                   <button type="button" className="ghost-btn small" onClick={() => setActiveView("report")}>리포트 보기</button>
                 </div>
@@ -2771,6 +3001,23 @@ function App() {
                     <strong>{filteredLabMetrics.length}개</strong>
                     <p>{activeLabSection === "focus" ? "선택한 질환에서 우선 보는 혈액검사만 추려서 보여주고 있습니다." : "선택한 항목군 기준으로 검사 입력 카드를 정리해 두었습니다."}</p>
                     <small>검색어가 있으면 코드, 항목명, 기본 해설까지 함께 검색합니다.</small>
+                  </div>
+                  <div className="input-support-card">
+                    <span className="chip accent">수치 일자별 보기</span>
+                    <strong>{labSnapshotOptions.length}개 저장</strong>
+                    <label className="snapshot-select-field">
+                      <select value={selectedLabSnapshotId} onChange={(event) => setSelectedLabSnapshotId(event.target.value)}>
+                        <option value="">저장 일자 선택</option>
+                        {labSnapshotOptions.map((snapshot) => (
+                          <option key={snapshot.id} value={snapshot.id}>
+                            {formatSavedAt(snapshot.savedAt)} · {snapshot.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="cta-row compact-cta-row">
+                      <button type="button" className="ghost-btn small" onClick={handleLoadSelectedSnapshot} disabled={!selectedLabSnapshotId}>선택 일자 불러오기</button>
+                    </div>
                   </div>
                   {ocrMergedCodes.length > 0 && (
                     <div className="input-support-card merged-support-card">
@@ -3503,6 +3750,23 @@ function App() {
                   ))}
                 </div>
               ) : <div className="empty-card">수치 조합을 기반으로 한 임상 해설 포인트가 여기에 생성됩니다.</div>}
+            </article>}
+
+            {activeReportSection === "clinical" && <article className="glass-card list-card">
+              <h3>상세 수치 해설</h3>
+              {metricNarratives.length ? (
+                <div className="guidance-stack">
+                  {metricNarratives.map((item) => (
+                    <div key={item.title} className="guidance-card level-watch">
+                      <div>
+                        <strong>{item.title}</strong>
+                        <span>METRIC NOTE</span>
+                      </div>
+                      <p>{item.body}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : <div className="empty-card">리포트 생성 후에는 실제 수치와 참고범위를 바탕으로 한 상세 해설이 여기에 정리됩니다.</div>}
             </article>}
 
             {activeReportSection === "clinical" && <article className="glass-card list-card">

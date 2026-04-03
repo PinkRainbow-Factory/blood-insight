@@ -11,7 +11,30 @@
     overall_summary: structured.disease
       ? `${structured.disease.name} 사용자의 추적 포인트를 기준으로 ${top.map((item) => item.test_code).join(", ")} 항목을 우선 정리했습니다.`
       : `일반 건강관리 기준에서 ${top.map((item) => item.test_code).join(", ")} 항목을 우선 정리했습니다.`,
+    dashboard_commentary: structured.disease
+      ? `${structured.disease.name}에서는 ${structured.disease.focus?.join(", ")} 같은 핵심 수치를 메인 화면부터 먼저 읽는 것이 좋습니다.`
+      : "질환을 선택하지 않아도 최근 혈액 수치와 증상, 복약 일정 흐름을 함께 읽는 일반 브리핑을 제공합니다.",
+    disease_commentary: structured.disease
+      ? `${structured.disease.name} 맥락에서는 질환 포커스 수치와 최근 변화 추세를 함께 보는 방식이 중요합니다.`
+      : "질환을 선택하지 않은 경우에는 일반 건강관리 기준으로 수치를 해석합니다.",
     priority_items: top,
+    metric_explanations: structured.metrics.slice(0, 6).map((metric) => ({
+      code: metric.code,
+      title: `${metric.name} (${metric.code})`,
+      current: `현재 값 ${metric.value}${metric.unit ? ` ${metric.unit}` : ""}`,
+      reference: Number.isFinite(metric.low) && Number.isFinite(metric.high) ? `참고범위 ${metric.low} - ${metric.high}${metric.unit ? ` ${metric.unit}` : ""}` : "참고범위 없음",
+      interpretation: `${metric.name} 수치는 ${metric.label} 상태로 보입니다.`,
+      disease_context: structured.disease ? `${structured.disease.name}에서는 ${metric.related?.join(", ") || "현재 질환 문맥"}과 연결해서 해석합니다.` : "증상과 최근 검사 추세를 함께 읽는 것이 좋습니다.",
+      action_hint: "다음 검사와 비교할 수 있도록 증상, 복약, 최근 검사 변화 메모를 함께 남겨 두세요."
+    })),
+    management_tips: top.map((item) => ({
+      title: item.title,
+      body: item.care_tip
+    })),
+    questions_for_clinician: top.map((item) => ({
+      title: item.test_code,
+      body: item.ask_doctor
+    })),
     safety_notice: "이 결과는 설명용 참고자료이며 진단이나 처방을 대신하지 않습니다."
   };
 }

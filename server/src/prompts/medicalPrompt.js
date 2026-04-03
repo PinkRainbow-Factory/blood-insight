@@ -19,6 +19,8 @@ export function buildMedicalUserPrompt({ profile, disease, metrics, structuredSu
     structuredSummary,
     outputSchema: {
       overall_summary: "string",
+      dashboard_commentary: "string",
+      disease_commentary: "string",
       priority_items: [
         {
           test_code: "string",
@@ -26,6 +28,29 @@ export function buildMedicalUserPrompt({ profile, disease, metrics, structuredSu
           why_it_matters: "string",
           care_tip: "string",
           ask_doctor: "string"
+        }
+      ],
+      metric_explanations: [
+        {
+          code: "string",
+          title: "string",
+          current: "string",
+          reference: "string",
+          interpretation: "string",
+          disease_context: "string",
+          action_hint: "string"
+        }
+      ],
+      management_tips: [
+        {
+          title: "string",
+          body: "string"
+        }
+      ],
+      questions_for_clinician: [
+        {
+          title: "string",
+          body: "string"
         }
       ],
       safety_notice: "string"

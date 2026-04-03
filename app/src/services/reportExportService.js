@@ -183,6 +183,7 @@ function makeExportModel(payload) {
   const aiResult = analysis.aiResult || {};
   const metricCards = collectMetricCards(payload);
   const sections = buildSections(analysis);
+  const metricNarratives = asList(payload.metricNarratives).map(normalizeItem).slice(0, 6);
   const clinicalBriefs = asList(payload.clinicalBriefs || analysis.clinicalBriefs).map(normalizeItem).slice(0, 4);
   const relationshipMap = asList(payload.relationshipMap || analysis.relationshipMap).slice(0, 3);
   const diseaseExpertGuide = payload.diseaseExpertGuide || analysis.diseaseExpertGuide || null;
@@ -199,7 +200,10 @@ function makeExportModel(payload) {
     disease: payload.disease || null,
     summary,
     metricCards,
-    sections,
+    sections: [
+      ...(metricNarratives.length ? [{ title: "상세 수치 해설", items: metricNarratives }] : []),
+      ...sections
+    ],
     clinicalBriefs,
     relationshipMap,
     diseaseExpertGuide,
