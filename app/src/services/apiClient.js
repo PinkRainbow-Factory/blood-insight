@@ -30,7 +30,7 @@ async function request(path, { method = "GET", body, token } = {}) {
         data: body
       }),
       new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("¿äÃ» ½Ã°£ÀÌ ÃÊ°úµÇ¾ú½À´Ï´Ù. ³×Æ®¿öÅ© ¶Ç´Â AI ÀÀ´ä »óÅÂ¸¦ È®ÀÎÇØ ÁÖ¼¼¿ä.")), DEFAULT_TIMEOUT_MS);
+        setTimeout(() => reject(new Error("ï¿½ï¿½Ã» ï¿½Ã°ï¿½ï¿½ï¿½ ï¿½Ê°ï¿½ï¿½Ç¾ï¿½ï¿½ï¿½ï¿½Ï´ï¿½. ï¿½ï¿½Æ®ï¿½ï¿½Å© ï¿½Ç´ï¿½ AI ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Â¸ï¿½ È®ï¿½ï¿½ï¿½ï¿½ ï¿½Ö¼ï¿½ï¿½ï¿½.")), DEFAULT_TIMEOUT_MS);
       })
     ]);
 
@@ -51,7 +51,7 @@ async function request(path, { method = "GET", body, token } = {}) {
     signal: controller.signal
   }).catch((error) => {
     if (error?.name === "AbortError") {
-      throw new Error("¿äÃ» ½Ã°£ÀÌ ÃÊ°úµÇ¾ú½À´Ï´Ù. ³×Æ®¿öÅ© ¶Ç´Â AI ÀÀ´ä »óÅÂ¸¦ È®ÀÎÇØ ÁÖ¼¼¿ä.");
+      throw new Error("ï¿½ï¿½Ã» ï¿½Ã°ï¿½ï¿½ï¿½ ï¿½Ê°ï¿½ï¿½Ç¾ï¿½ï¿½ï¿½ï¿½Ï´ï¿½. ï¿½ï¿½Æ®ï¿½ï¿½Å© ï¿½Ç´ï¿½ AI ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Â¸ï¿½ È®ï¿½ï¿½ï¿½ï¿½ ï¿½Ö¼ï¿½ï¿½ï¿½.");
     }
     throw error;
   }).finally(() => {
@@ -112,6 +112,19 @@ export async function analyzeViaProxy({ provider, profile, disease, labs, token 
       profile,
       disease,
       labs
+    }
+  });
+}
+
+export async function explainCustomMetricViaProxy({ provider, profile, disease, metric, token }) {
+  return request("/api/analyze/custom-metric", {
+    method: "POST",
+    token,
+    body: {
+      provider,
+      profile,
+      disease,
+      metric
     }
   });
 }

@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { defaultProfile, diseaseCatalog, diseaseExpertGuides, diseasePlaybooks, metricDefinitions, sampleValues } from "./data";
-import { fetchSession, findLoginId, loginUser, logoutUser, resetPassword, saveAiSettings, signupUser } from "./services/apiClient";
+import { explainCustomMetricViaProxy, fetchSession, findLoginId, loginUser, logoutUser, resetPassword, saveAiSettings, signupUser } from "./services/apiClient";
 import { loadMedicalReportHistory, persistMedicalReport, requestMedicalAnalysis } from "./services/medicalAnalysisService";
 import { cancelLabReminder, cancelMedicationReminder, registerNotificationActionListener, scheduleLabReminder, scheduleMedicationReminder } from "./services/notificationService";
 import { extractLabMetricsFromImage, getSampleOcrPayload, ocrInstitutionPresets, ocrTemplates } from "./services/ocrService";
@@ -445,7 +445,7 @@ function App() {
   const [customLabs, setCustomLabs] = useState(loadStoredCustomLabs);
   const [labSnapshots, setLabSnapshots] = useState(loadStoredLabSnapshots);
   const [selectedLabSnapshotId, setSelectedLabSnapshotId] = useState("");
-  const [customLabDraft, setCustomLabDraft] = useState({ name: "", code: "", value: "", unit: "", low: "", high: "" });
+  const [customLabDraft, setCustomLabDraft] = useState({ name: "", code: "", value: "", unit: "", low: "", high: "", meaning: "", highText: "", lowText: "", generalTip: "" });
   const [medicationScheduleDraft, setMedicationScheduleDraft] = useState(emptyMedicationDraft);
   const [medicationEditorOpen, setMedicationEditorOpen] = useState(false);
   const [editingMedicationIndex, setEditingMedicationIndex] = useState(-1);
@@ -456,6 +456,9 @@ function App() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
   const [selectedMetricCode, setSelectedMetricCode] = useState("");
+  const [customMetricEditMode, setCustomMetricEditMode] = useState(false);
+  const [customMetricAiBusy, setCustomMetricAiBusy] = useState(false);
+  const [customMetricDraft, setCustomMetricDraft] = useState({ meaning: "", highText: "", lowText: "", generalTip: "" });
   const [uploadedImage, setUploadedImage] = useState("");
   const [uploadedFile, setUploadedFile] = useState(null);
   const [ocrBusy, setOcrBusy] = useState(false);
@@ -556,10 +559,10 @@ function App() {
         low: item.low === "" ? Number.NaN : Number(item.low),
         high: item.high === "" ? Number.NaN : Number(item.high)
       },
-      meaning: "사용자가 추가한 커스텀 혈액검사 항목입니다.",
-      highText: "입력한 참고범위와 비교해 높은지 확인해 보세요.",
-      lowText: "입력한 참고범위와 비교해 낮은지 확인해 보세요.",
-      generalTip: "검사표의 참고 범위를 함께 입력하면 해설 정확도가 더 좋아집니다."
+      meaning: item.meaning || "사용자가 추가한 커스텀 혈액검사 항목입니다.",
+      highText: item.highText || "입력한 참고범위와 비교해 높은지 확인해 보세요.",
+      lowText: item.lowText || "입력한 참고범위와 비교해 낮은지 확인해 보세요.",
+      generalTip: item.generalTip || "검사표의 참고 범위를 함께 입력하면 해설 정확도가 더 좋아집니다."
     }));
 
     return [...metricDefinitions, ...customMetricDefinitions];
@@ -569,6 +572,11 @@ function App() {
     () => combinedMetrics.find((metric) => metric.code === selectedMetricCode) || null,
     [combinedMetrics, selectedMetricCode]
   );
+  const selectedCustomMetricIndex = useMemo(
+    () => customLabs.findIndex((item) => item.code === selectedMetricCode),
+    [customLabs, selectedMetricCode]
+  );
+  const selectedCustomMetric = selectedCustomMetricIndex >= 0 ? customLabs[selectedCustomMetricIndex] : null;
   const latestHistoryLabs = history[0]?.labs || null;
   const filteredLabMetrics = useMemo(() => {
     const search = normalizeText(labSearchQuery);
@@ -781,6 +789,22 @@ function App() {
     window.scrollTo?.(0, 0);
   }, [activeView]);
 
+  useEffect(() => {
+    if (!selectedCustomMetric) {
+      setCustomMetricEditMode(false);
+      setCustomMetricDraft({ meaning: "", highText: "", lowText: "", generalTip: "" });
+      return;
+    }
+
+    setCustomMetricDraft({
+      meaning: selectedCustomMetric.meaning || "",
+      highText: selectedCustomMetric.highText || "",
+      lowText: selectedCustomMetric.lowText || "",
+      generalTip: selectedCustomMetric.generalTip || ""
+    });
+    setCustomMetricEditMode(false);
+  }, [selectedCustomMetric]);
+
   function updateProfile(field, value) {
     setProfile((current) => ({ ...current, [field]: value }));
   }
@@ -864,6 +888,64 @@ function App() {
 
   function updateCustomLab(index, field, value) {
     setCustomLabs((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item));
+  }
+
+  async function handleAiRecommendCustomMetric() {
+    if (!selectedCustomMetric || !session?.token) {
+      flashToast("로그인 상태와 커스텀 항목 선택 상태를 먼저 확인해 주세요.", "error");
+      return;
+    }
+
+    try {
+      setCustomMetricAiBusy(true);
+      const response = await explainCustomMetricViaProxy({
+        token: session.token,
+        provider: settingsDraft.provider,
+        profile,
+        disease: selectedDisease,
+        metric: {
+          code: selectedCustomMetric.code,
+          name: selectedCustomMetric.name,
+          unit: selectedCustomMetric.unit,
+          value: selectedCustomMetric.value,
+          low: selectedCustomMetric.low,
+          high: selectedCustomMetric.high
+        }
+      });
+
+      const nextDraft = {
+        meaning: response.meaning || customMetricDraft.meaning,
+        highText: response.highText || customMetricDraft.highText,
+        lowText: response.lowText || customMetricDraft.lowText,
+        generalTip: response.generalTip || customMetricDraft.generalTip
+      };
+
+      setCustomMetricDraft(nextDraft);
+      setCustomLabs((current) => current.map((item, index) => (
+        index === selectedCustomMetricIndex
+          ? { ...item, ...nextDraft }
+          : item
+      )));
+      flashToast("AI가 커스텀 항목 해설을 추천했습니다.", "success");
+    } catch (error) {
+      flashToast(error.message || "커스텀 항목 AI 추천을 불러오지 못했습니다.", "error");
+    } finally {
+      setCustomMetricAiBusy(false);
+    }
+  }
+
+  function handleSaveCustomMetricDraft() {
+    if (selectedCustomMetricIndex < 0) {
+      return;
+    }
+
+    setCustomLabs((current) => current.map((item, index) => (
+      index === selectedCustomMetricIndex
+        ? { ...item, ...customMetricDraft }
+        : item
+    )));
+    setCustomMetricEditMode(false);
+    flashToast("커스텀 항목 해설을 저장했습니다.", "success");
   }
 
   function updateMedicationSchedule(index, field, value) {
@@ -2714,11 +2796,13 @@ function App() {
 
         {activeView === "profile" && (
           <section className="screen-grid">
-            <article className="glass-card profile-card">
-              <div className="section-head">
-                <h3>기본 프로필 정보</h3>
-                <span className="chip">개인 브리핑 기준 정보</span>
-              </div>
+            <CollapsibleSectionCard
+              className="profile-card"
+              title="기본 프로필 정보"
+              subtitle="개인 브리핑 기준 정보를 접어서 관리합니다."
+              defaultOpen={false}
+              actions={<span className="chip">개인 브리핑 기준 정보</span>}
+            >
               <div className="form-grid">
                 <label>
                   표시 이름
@@ -2744,6 +2828,37 @@ function App() {
                   </select>
                 </label>
               </div>
+              {profile.mode === "patient" ? (
+                <div className="selection-card disease-inline-summary profile-disease-card">
+                  <div className="section-head compact">
+                    <h4>질환 선택</h4>
+                    {selectedDisease ? <span className="chip accent">{selectedDisease.name}</span> : <span className="chip">미선택</span>}
+                  </div>
+                  <label>
+                    질환명 또는 코드 검색
+                    <input value={profile.diseaseQuery} onChange={(event) => updateProfile("diseaseQuery", event.target.value)} placeholder="예: 백혈병, AML, 림프종, CKD, 간경변" />
+                  </label>
+                  <div className="search-results inline-disease-results">
+                    {diseaseResults.map((item) => (
+                      <button
+                        key={item.code}
+                        type="button"
+                        className={`search-result ${profile.diseaseCode === item.code ? "active" : ""}`}
+                        onClick={() => updateProfile("diseaseCode", item.code)}
+                      >
+                        <strong>{item.name}</strong>
+                        <span>{item.code} · {item.group}</span>
+                        <small>{item.note}</small>
+                      </button>
+                    ))}
+                  </div>
+                  {selectedDisease ? (
+                    <small>우선 볼 핵심 수치: {selectedDisease.focus.join(", ")}</small>
+                  ) : (
+                    <small>환자 모드에서는 질환을 직접 선택하면 메인/리포트/질환 해설에 질환 맥락이 반영됩니다.</small>
+                  )}
+                </div>
+              ) : null}
               <label>
                 복용 약 / 치료 중인 약물
                 <textarea rows="3" value={profile.medications} onChange={(event) => updateProfile("medications", event.target.value)} placeholder="예: 스테로이드 복용 중, 항암 치료 중, 철분제 복용 등 현재 상태를 적어 주세요." />
@@ -2849,37 +2964,6 @@ function App() {
                   </div>
                   <div className="inline-note symptom-inline-note">선택한 증상이 아직 없습니다. 필요한 항목만 골라 두면 문진 카드가 더 간결해집니다.</div>
                 </div>
-                {profile.mode === "patient" ? (
-                  <div className="selection-card disease-inline-summary">
-                    <div className="section-head compact">
-                      <h4>질환 선택</h4>
-                      {selectedDisease ? <span className="chip accent">{selectedDisease.name}</span> : <span className="chip">미선택</span>}
-                    </div>
-                    <label>
-                      질환명 또는 코드 검색
-                      <input value={profile.diseaseQuery} onChange={(event) => updateProfile("diseaseQuery", event.target.value)} placeholder="예: 백혈병, AML, 림프종, CKD, 간경변" />
-                    </label>
-                    <div className="search-results inline-disease-results">
-                      {diseaseResults.map((item) => (
-                        <button
-                          key={item.code}
-                          type="button"
-                          className={`search-result ${profile.diseaseCode === item.code ? "active" : ""}`}
-                          onClick={() => updateProfile("diseaseCode", item.code)}
-                        >
-                          <strong>{item.name}</strong>
-                          <span>{item.code} · {item.group}</span>
-                          <small>{item.note}</small>
-                        </button>
-                      ))}
-                    </div>
-                    {selectedDisease ? (
-                      <small>우선 볼 핵심 수치: {selectedDisease.focus.join(", ")}</small>
-                    ) : (
-                      <small>환자 모드에서는 질환을 직접 선택하면 메인/리포트/질환 해설에 질환 맥락이 반영됩니다.</small>
-                    )}
-                  </div>
-                ) : null}
                 <div className="form-grid symptom-grid">
                   <label>
                     악화 요인
@@ -2902,7 +2986,7 @@ function App() {
                   <button type="button" className="primary-btn" onClick={handleSaveProfileDraft}>저장</button>
                 </div>
               </CollapsibleSectionCard>
-            </article>
+            </CollapsibleSectionCard>
           </section>
         )}
 
@@ -2912,7 +2996,7 @@ function App() {
               className="schedule-card"
               title="혈액검사 일정 관리"
               subtitle="다음 검사 예정일과 알림 전략을 접어서 관리합니다."
-              defaultOpen={true}
+              defaultOpen={false}
               actions={
                 <>
                   <span className="chip accent">예정일 / 알림 전략 / 재검 준비</span>
@@ -2996,12 +3080,11 @@ function App() {
               className="labs-custom-card"
               title="혈액 수치 입력"
               subtitle="기본 수치 입력, 저장, 최근 기록 불러오기를 접어서 관리합니다."
-              defaultOpen={true}
+              defaultOpen={false}
               actions={<span className="chip accent">입력 / 저장 / 불러오기</span>}
             >
                 <div className="chip-row">
                   <button type="button" className="icon-help-btn" onClick={() => setHelpModal(HELP_CONTENT.labs)}>?</button>
-                  <button type="button" className="ghost-btn small" onClick={() => saveCurrentLabSnapshot("manual")}>수치 저장</button>
                   <button type="button" className="ghost-btn small" onClick={handleLoadLatestLabs} disabled={!latestHistoryLabs}>최근 기록 불러오기</button>
                   <button type="button" className="ghost-btn small" onClick={() => setActiveView("report")}>리포트 보기</button>
                 </div>
@@ -3048,6 +3131,7 @@ function App() {
                       </select>
                     </label>
                     <div className="cta-row compact-cta-row">
+                      <button type="button" className="ghost-btn small" onClick={() => saveCurrentLabSnapshot("manual")}>수치 저장</button>
                       <button type="button" className="ghost-btn small" onClick={handleLoadSelectedSnapshot} disabled={!selectedLabSnapshotId}>선택 일자 불러오기</button>
                     </div>
                   </div>
@@ -4042,7 +4126,7 @@ function App() {
               className="labs-ocr-card"
               title="설정"
               subtitle="AI 공급자, 모델, API 키와 자동 로그인을 접어서 관리합니다."
-              defaultOpen={true}
+              defaultOpen={false}
               actions={
                 <>
                   <span className="chip accent">사용자별 API 연결</span>
@@ -4126,6 +4210,16 @@ function App() {
             <button type="button" className="close-btn" onClick={() => setSelectedMetricCode("")}>닫기</button>
             <p className="eyebrow">METRIC DETAIL</p>
             <h3>{selectedMetric.name} ({selectedMetric.code})</h3>
+            {selectedCustomMetric ? (
+              <div className="cta-row compact-cta-row">
+                <button type="button" className="ghost-btn small" onClick={() => setCustomMetricEditMode((current) => !current)}>
+                  {customMetricEditMode ? "수정 닫기" : "수정"}
+                </button>
+                <button type="button" className="primary-btn small" onClick={handleAiRecommendCustomMetric} disabled={customMetricAiBusy}>
+                  {customMetricAiBusy ? "AI 추천 중..." : "AI 추천"}
+                </button>
+              </div>
+            ) : null}
             {(() => {
               const currentValue = customLabs.find((item) => item.code === selectedMetric.code)?.value ?? labs[selectedMetric.code];
               const currentStatus = classifyMetric(selectedMetric, currentValue);
@@ -4147,6 +4241,32 @@ function App() {
                 <strong>관리 팁</strong>
                 <p>{currentStatus === "high" ? selectedMetric.highText : currentStatus === "low" ? selectedMetric.lowText : selectedMetric.generalTip}</p>
               </div>
+              {selectedCustomMetric && customMetricEditMode ? (
+                <div className="modal-block">
+                  <strong>커스텀 해설 편집</strong>
+                  <div className="form-grid">
+                    <label>
+                      의미
+                      <textarea rows="3" value={customMetricDraft.meaning} onChange={(event) => setCustomMetricDraft((current) => ({ ...current, meaning: event.target.value }))} />
+                    </label>
+                    <label>
+                      높을 때 안내
+                      <textarea rows="3" value={customMetricDraft.highText} onChange={(event) => setCustomMetricDraft((current) => ({ ...current, highText: event.target.value }))} />
+                    </label>
+                    <label>
+                      낮을 때 안내
+                      <textarea rows="3" value={customMetricDraft.lowText} onChange={(event) => setCustomMetricDraft((current) => ({ ...current, lowText: event.target.value }))} />
+                    </label>
+                    <label>
+                      일반 팁
+                      <textarea rows="3" value={customMetricDraft.generalTip} onChange={(event) => setCustomMetricDraft((current) => ({ ...current, generalTip: event.target.value }))} />
+                    </label>
+                  </div>
+                  <div className="cta-row compact-cta-row">
+                    <button type="button" className="primary-btn small" onClick={handleSaveCustomMetricDraft}>커스텀 해설 저장</button>
+                  </div>
+                </div>
+              ) : null}
             </div>
               );
             })()}
