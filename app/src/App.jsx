@@ -403,6 +403,27 @@ function StatusPill({ status }) {
   return <span className={`status-pill status-${status}`}>{labels[status] || "확인 필요"}</span>;
 }
 
+function CollapsibleSectionCard({ title, subtitle, actions = null, defaultOpen = false, className = "", children }) {
+  return (
+    <details className={`glass-card collapsible-card section-collapsible ${className}`.trim()} open={defaultOpen}>
+      <summary className="collapsible-summary section-collapsible-summary">
+        <div>
+          <strong>{title}</strong>
+          {subtitle ? <small>{subtitle}</small> : null}
+        </div>
+        <div className="section-collapsible-actions">
+          {actions}
+          <span className="chip collapsible-state-chip">
+            <span className="collapsed-label">펼치기</span>
+            <span className="expanded-label">접기</span>
+          </span>
+        </div>
+      </summary>
+      <div className="collapsible-body section-collapsible-body">{children}</div>
+    </details>
+  );
+}
+
 function App() {
   const [session, setSession] = useState(null);
   const [sessionReady, setSessionReady] = useState(false);
@@ -2737,11 +2758,13 @@ function App() {
                   <textarea rows="4" value={profile.doctorMemo || ""} onChange={(event) => updateProfile("doctorMemo", event.target.value)} placeholder="다음 외래에서 꼭 물어볼 내용, 최근 검사에서 신경 쓰이는 점, 상담 목표 등을 적어 두세요." />
                 </label>
               </div>
-              <div className="symptom-intake-card">
-                <div className="section-head">
-                  <h3>증상 입력 문진 카드</h3>
-                  <span className="chip accent">증상 요약 + 강도 + 기간 + 체크리스트</span>
-                </div>
+              <CollapsibleSectionCard
+                className="symptom-intake-card"
+                title="증상 입력 문진 카드"
+                subtitle="증상 요약, 강도, 기간, 체크리스트를 필요할 때만 펼쳐서 관리합니다."
+                defaultOpen={false}
+                actions={<span className="chip accent">증상 요약 + 강도 + 기간 + 체크리스트</span>}
+              >
                 <div className="form-grid symptom-grid">
                   <label>
                     증상 한줄 요약
@@ -2878,21 +2901,25 @@ function App() {
                 <div className="cta-row compact-cta-row profile-save-row">
                   <button type="button" className="primary-btn" onClick={handleSaveProfileDraft}>저장</button>
                 </div>
-              </div>
+              </CollapsibleSectionCard>
             </article>
           </section>
         )}
 
         {activeView === "schedule" && (
           <section className="screen-grid two-column schedule-grid-screen">
-            <article className="glass-card schedule-card">
-              <div className="section-head">
-                <h3>혈액검사 일정 관리</h3>
-                <div className="section-head-actions">
+            <CollapsibleSectionCard
+              className="schedule-card"
+              title="혈액검사 일정 관리"
+              subtitle="다음 검사 예정일과 알림 전략을 접어서 관리합니다."
+              defaultOpen={true}
+              actions={
+                <>
                   <span className="chip accent">예정일 / 알림 전략 / 재검 준비</span>
                   <button type="button" className="icon-help-btn" onClick={() => setHelpModal(HELP_CONTENT.schedule)}>?</button>
-                </div>
-              </div>
+                </>
+              }
+            >
               <div className="form-grid">
                 <label>
                   다음 혈액검사 예정일
@@ -2918,13 +2945,15 @@ function App() {
                 <button type="button" className="ghost-btn" onClick={handleCancelReminder} disabled={notificationBusy}>혈액검사 알림 제거</button>
               </div>
               {notificationMessage ? <div className="inline-note">{notificationMessage}</div> : null}
-            </article>
+            </CollapsibleSectionCard>
 
-            <article className="glass-card schedule-card">
-              <div className="section-head">
-                <h3>복약 일정 알림</h3>
-                <span className="chip">여러 시간대 복약을 한 번에 관리</span>
-              </div>
+            <CollapsibleSectionCard
+              className="schedule-card"
+              title="복약 일정 알림"
+              subtitle="아침, 점심, 저녁처럼 여러 시간대 복약 알림을 접어서 관리합니다."
+              defaultOpen={false}
+              actions={<span className="chip">여러 시간대 복약을 한 번에 관리</span>}
+            >
               <div className="medication-toolbar">
                 <div className="inline-note">복약 시간이 여러 개라면 `+ 일정 추가`로 아침/점심/저녁처럼 분리해서 등록해 두세요.</div>
                 <button type="button" className="primary-btn small" onClick={() => openMedicationEditor(-1)}>+ 일정 추가</button>
@@ -2957,22 +2986,25 @@ function App() {
                 <button type="button" className="ghost-btn" onClick={handleCancelMedicationReminder} disabled={medicationNotificationBusy}>복약 알림 제거</button>
               </div>
               {medicationNotificationMessage ? <div className="inline-note">{medicationNotificationMessage}</div> : null}
-            </article>
+            </CollapsibleSectionCard>
           </section>
         )}
 
         {activeView === "labs" && (
           <section className="screen-grid two-column labs-screen">
-            <article className="glass-card labs-custom-card">
-              <div className="section-head">
-                <h3>혈액 수치 입력</h3>
+            <CollapsibleSectionCard
+              className="labs-custom-card"
+              title="혈액 수치 입력"
+              subtitle="기본 수치 입력, 저장, 최근 기록 불러오기를 접어서 관리합니다."
+              defaultOpen={true}
+              actions={<span className="chip accent">입력 / 저장 / 불러오기</span>}
+            >
                 <div className="chip-row">
                   <button type="button" className="icon-help-btn" onClick={() => setHelpModal(HELP_CONTENT.labs)}>?</button>
                   <button type="button" className="ghost-btn small" onClick={() => saveCurrentLabSnapshot("manual")}>수치 저장</button>
                   <button type="button" className="ghost-btn small" onClick={handleLoadLatestLabs} disabled={!latestHistoryLabs}>최근 기록 불러오기</button>
                   <button type="button" className="ghost-btn small" onClick={() => setActiveView("report")}>리포트 보기</button>
                 </div>
-              </div>
                 <div className="labs-toolbar">
                 <div className="labs-toolbar-row">
                   <div className="segmented-row">
@@ -3195,7 +3227,7 @@ function App() {
                   </div>
                 </div>
               </details>
-            </article>
+            </CollapsibleSectionCard>
 
             <article className="glass-card">
               <details className="ocr-collapsible-card collapsible-card">
@@ -4006,14 +4038,18 @@ function App() {
 
         {activeView === "settings" && (
           <section className="screen-grid">
-            <article className="glass-card labs-ocr-card">
-              <div className="section-head">
-                <h3>설정</h3>
-                <div className="section-head-actions">
+            <CollapsibleSectionCard
+              className="labs-ocr-card"
+              title="설정"
+              subtitle="AI 공급자, 모델, API 키와 자동 로그인을 접어서 관리합니다."
+              defaultOpen={true}
+              actions={
+                <>
                   <span className="chip accent">사용자별 API 연결</span>
                   <button type="button" className="icon-help-btn" onClick={() => setHelpModal(HELP_CONTENT.settings)}>?</button>
-                </div>
-              </div>
+                </>
+              }
+            >
               <form className="settings-form" onSubmit={handleSaveSettings}>
                 <div className="toggle-row">
                   <button type="button" className={settingsDraft.provider === "gemini" ? "toggle-btn active" : "toggle-btn"} onClick={() => setSettingsDraft((current) => ({ ...current, provider: "gemini" }))}>Gemini</button>
@@ -4057,7 +4093,7 @@ function App() {
 
                 <button type="submit" className="primary-btn wide" disabled={settingsBusy}>{settingsBusy ? "저장 중..." : "설정 저장"}</button>
               </form>
-            </article>
+            </CollapsibleSectionCard>
           </section>
         )}
       </div>

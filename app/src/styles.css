@@ -1343,6 +1343,28 @@ label { display: block; color: var(--muted); font-size: 14px; }
   gap: 14px;
   margin-top: 16px;
 }
+.section-collapsible-summary {
+  align-items: flex-start;
+}
+.section-collapsible-summary > div:first-child {
+  min-width: 0;
+}
+.section-collapsible-summary > div:first-child strong {
+  font-size: 1.02rem;
+}
+.section-collapsible-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.section-collapsible-actions .chip-row {
+  justify-content: flex-end;
+}
+.section-collapsible-body {
+  margin-top: 18px;
+}
 .alert-panel {
   margin-top: 18px;
   padding: 20px;
