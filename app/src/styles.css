@@ -547,11 +547,32 @@ label { display: block; color: var(--muted); font-size: 14px; }
 .summary-card { display: grid; gap: 18px; }
 .status-stack { display: grid; gap: 10px; }
 .status-stack.compact { gap: 8px; }
+.status-stack.compact-strip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
 .status-line {
   padding: 14px 16px;
   border-radius: 18px;
   font-weight: 600;
   border: 1px solid var(--line);
+}
+.status-stack.compact-strip .status-line {
+  min-height: 68px;
+  display: grid;
+  gap: 4px;
+  align-content: center;
+  justify-items: start;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.25;
+}
+.status-stack.compact-strip .status-line strong {
+  font-size: 14px;
+  line-height: 1.1;
+}
+.status-stack.compact-strip .status-line span {
+  font-size: 12px;
 }
 .status-line.done { background: rgba(47, 158, 116, 0.12); color: #1e6f4d; }
 .status-line.todo { background: rgba(239, 109, 106, 0.1); color: #90484a; }
@@ -1456,6 +1477,12 @@ label { display: block; color: var(--muted); font-size: 14px; }
   box-shadow: var(--shadow-soft);
   display: grid;
   gap: 8px;
+  text-align: left;
+  align-content: start;
+}
+.signal-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(30, 36, 49, 0.08);
 }
 .signal-card span,
 .briefing-cell span { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
@@ -2275,6 +2302,14 @@ label { display: block; color: var(--muted); font-size: 14px; }
   .scan-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .status-stack.compact-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .status-stack.compact-strip .status-line {
+    min-height: 60px;
+    padding: 10px 12px;
+  }
   .ocr-table-head { display: none; }
   .ocr-toolbar { flex-direction: column; align-items: stretch; }
   .ocr-table-row { grid-template-columns: 1fr; }
@@ -2540,6 +2575,15 @@ label { display: block; color: var(--muted); font-size: 14px; }
   border-radius: 24px;
   border: 1px solid var(--line);
   background: rgba(255,255,255,0.62);
+}
+.screen-grid > .symptom-intake-card {
+  margin-top: 0;
+}
+.custom-metric-actions {
+  margin: 12px 0 6px;
+}
+.custom-metric-actions + .modal-stack {
+  margin-top: 18px;
 }
 .symptom-grid {
   align-items: start;

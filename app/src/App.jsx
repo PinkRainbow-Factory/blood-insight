@@ -898,13 +898,14 @@ function App() {
 
     try {
       setCustomMetricAiBusy(true);
+      const targetCode = selectedCustomMetric.code;
       const response = await explainCustomMetricViaProxy({
         token: session.token,
         provider: settingsDraft.provider,
         profile,
         disease: selectedDisease,
         metric: {
-          code: selectedCustomMetric.code,
+          code: targetCode,
           name: selectedCustomMetric.name,
           unit: selectedCustomMetric.unit,
           value: selectedCustomMetric.value,
@@ -914,21 +915,21 @@ function App() {
       });
 
       const nextDraft = {
-        meaning: response.meaning || customMetricDraft.meaning,
-        highText: response.highText || customMetricDraft.highText,
-        lowText: response.lowText || customMetricDraft.lowText,
-        generalTip: response.generalTip || customMetricDraft.generalTip
+        meaning: response?.meaning || customMetricDraft.meaning || `${selectedCustomMetric.name} 항목의 의미를 AI가 요약하지 못했습니다.`,
+        highText: response?.highText || customMetricDraft.highText || `${selectedCustomMetric.name} 수치가 높을 때는 참고범위, 증상, 복약 흐름을 함께 확인해 주세요.`,
+        lowText: response?.lowText || customMetricDraft.lowText || `${selectedCustomMetric.name} 수치가 낮을 때는 최근 컨디션 변화와 함께 의료진에게 의미를 확인해 주세요.`,
+        generalTip: response?.generalTip || customMetricDraft.generalTip || "검사 날짜와 참고범위를 함께 기록하면 다음 리포트 비교에 도움이 됩니다."
       };
 
       setCustomMetricDraft(nextDraft);
-      setCustomLabs((current) => current.map((item, index) => (
-        index === selectedCustomMetricIndex
+      setCustomLabs((current) => current.map((item) => (
+        item.code === targetCode
           ? { ...item, ...nextDraft }
           : item
       )));
       flashToast("AI가 커스텀 항목 해설을 추천했습니다.", "success");
     } catch (error) {
-      flashToast(error.message || "커스텀 항목 AI 추천을 불러오지 못했습니다.", "error");
+      flashToast(humanizeAppError(error?.message, "커스텀 항목 AI 추천을 불러오지 못했습니다."), "error");
     } finally {
       setCustomMetricAiBusy(false);
     }
@@ -2748,21 +2749,35 @@ function App() {
               )}
               <div className="agent-signal-grid">
                 {agentSignals.map((signal) => (
-                  <div key={signal.code} className={`signal-card signal-${signal.status}`}>
+                  <button
+                    key={signal.code}
+                    type="button"
+                    className={`signal-card signal-${signal.status}`}
+                    onClick={() => setSelectedMetricCode(signal.code)}
+                  >
                     <span>{signal.code}</span>
                     <strong>{signal.value} {signal.unit}</strong>
                     <small>{signal.name}</small>
-                  </div>
+                  </button>
                 ))}
               </div>
             </article>
 
             <article className="glass-card summary-card">
               <h3>상담 전 준비 상태</h3>
-              <div className="status-stack">
-                <div className={`status-line ${readiness.profile ? "done" : "todo"}`}>프로필 입력 상태 {readiness.profile ? "준비 완료" : "입력 필요"}</div>
-                <div className={`status-line ${readiness.disease ? "done" : "todo"}`}>질환/해설 문맥 상태 {readiness.disease ? "준비 완료" : "선택 필요"}</div>
-                <div className={`status-line ${readiness.apiKey ? "done" : "todo"}`}>AI API 연결 상태 {readiness.apiKey ? "연결 완료" : "설정 필요"}</div>
+              <div className="status-stack compact-strip">
+                <div className={`status-line ${readiness.profile ? "done" : "todo"}`}>
+                  <strong>프로필</strong>
+                  <span>{readiness.profile ? "완료" : "입력 필요"}</span>
+                </div>
+                <div className={`status-line ${readiness.disease ? "done" : "todo"}`}>
+                  <strong>질환 문맥</strong>
+                  <span>{readiness.disease ? "준비 완료" : "선택 필요"}</span>
+                </div>
+                <div className={`status-line ${readiness.apiKey ? "done" : "todo"}`}>
+                  <strong>AI 연결</strong>
+                  <span>{readiness.apiKey ? "완료" : "설정 필요"}</span>
+                </div>
               </div>
               <div className="orb-wrap">
                 <div className="orb-ring"><span>{abnormalCount}</span><small>이상 수치 항목 수</small></div>
@@ -2873,13 +2888,14 @@ function App() {
                   <textarea rows="4" value={profile.doctorMemo || ""} onChange={(event) => updateProfile("doctorMemo", event.target.value)} placeholder="다음 외래에서 꼭 물어볼 내용, 최근 검사에서 신경 쓰이는 점, 상담 목표 등을 적어 두세요." />
                 </label>
               </div>
-              <CollapsibleSectionCard
-                className="symptom-intake-card"
-                title="증상 입력 문진 카드"
-                subtitle="증상 요약, 강도, 기간, 체크리스트를 필요할 때만 펼쳐서 관리합니다."
-                defaultOpen={false}
-                actions={<span className="chip accent">증상 요약 + 강도 + 기간 + 체크리스트</span>}
-              >
+            </CollapsibleSectionCard>
+            <CollapsibleSectionCard
+              className="symptom-intake-card"
+              title="증상 입력 문진 카드"
+              subtitle="증상 요약, 강도, 기간, 체크리스트를 필요할 때만 펼쳐서 관리합니다."
+              defaultOpen={false}
+              actions={<span className="chip accent">증상 요약 + 강도 + 기간 + 체크리스트</span>}
+            >
                 <div className="form-grid symptom-grid">
                   <label>
                     증상 한줄 요약
@@ -2985,7 +3001,6 @@ function App() {
                 <div className="cta-row compact-cta-row profile-save-row">
                   <button type="button" className="primary-btn" onClick={handleSaveProfileDraft}>저장</button>
                 </div>
-              </CollapsibleSectionCard>
             </CollapsibleSectionCard>
           </section>
         )}
@@ -4211,7 +4226,7 @@ function App() {
             <p className="eyebrow">METRIC DETAIL</p>
             <h3>{selectedMetric.name} ({selectedMetric.code})</h3>
             {selectedCustomMetric ? (
-              <div className="cta-row compact-cta-row">
+              <div className="cta-row compact-cta-row custom-metric-actions">
                 <button type="button" className="ghost-btn small" onClick={() => setCustomMetricEditMode((current) => !current)}>
                   {customMetricEditMode ? "수정 닫기" : "수정"}
                 </button>

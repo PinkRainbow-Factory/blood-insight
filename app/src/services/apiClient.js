@@ -1,7 +1,8 @@
-import { Capacitor, CapacitorHttp } from "@capacitor/core";
+﻿import { Capacitor, CapacitorHttp } from "@capacitor/core";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 const DEFAULT_TIMEOUT_MS = 45000;
+const TIMEOUT_MESSAGE = "요청 시간이 길어지고 있습니다. 네트워크 또는 AI 응답 상태를 확인한 뒤 다시 시도해 주세요.";
 
 function parseNativeData(data) {
   if (typeof data === "string") {
@@ -30,7 +31,7 @@ async function request(path, { method = "GET", body, token } = {}) {
         data: body
       }),
       new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("��û �ð��� �ʰ��Ǿ����ϴ�. ��Ʈ��ũ �Ǵ� AI ���� ���¸� Ȯ���� �ּ���.")), DEFAULT_TIMEOUT_MS);
+        setTimeout(() => reject(new Error(TIMEOUT_MESSAGE)), DEFAULT_TIMEOUT_MS);
       })
     ]);
 
@@ -51,7 +52,7 @@ async function request(path, { method = "GET", body, token } = {}) {
     signal: controller.signal
   }).catch((error) => {
     if (error?.name === "AbortError") {
-      throw new Error("��û �ð��� �ʰ��Ǿ����ϴ�. ��Ʈ��ũ �Ǵ� AI ���� ���¸� Ȯ���� �ּ���.");
+      throw new Error(TIMEOUT_MESSAGE);
     }
     throw error;
   }).finally(() => {
